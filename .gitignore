@@ -33,3 +33,9 @@
 
 # Vim swap files
 *.sw?
+
+# QT files
+*.moc
+
+# binary file
+demo/demo
