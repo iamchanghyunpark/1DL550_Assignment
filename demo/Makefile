@@ -5,7 +5,8 @@ LIBPEDSOURCES=$(shell echo ../libpedsim/*.cpp)
 LIBPEDOBJECTS=$(LIBPEDSOURCES:.cpp=.o)
 
 TARGET=demo
-QTINCLUDES=-I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore
+QT_HEADERS=$(shell qmake -query QT_INSTALL_HEADERS)
+QTINCLUDES=-I$(QT_HEADERS) -I$(QT_HEADERS)/QtWidgets -I$(QT_HEADERS)/QtGui -I$(QT_HEADERS)/QtCore
 INCPATH=-I../libpedsim
 CXXFLAGS=-fPIC $(INCPATH) $(QTINCLUDES)
 LIBS = -lQt5Widgets -lQt5Gui -lQt5Core
@@ -15,7 +16,7 @@ MOCFILES=ParseScenario.moc PedSimulation.moc
 
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS) $(MOCFILES)
+$(TARGET): $(OBJECTS) $(MOCFILES) $(LIBPEDOBJECTS)
 	g++ $(CXXFLAGS) -o $(TARGET) $(OBJECTS) $(LIBPEDOBJECTS) $(LIBS)
 
 %.o: %.cpp %.moc
