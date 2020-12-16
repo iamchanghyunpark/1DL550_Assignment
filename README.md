@@ -24,9 +24,17 @@ This should build both binaries in `libpedsim` then in `demo`
 
 If during the build the compiler complains of unknown path to the Qt headers
 (include path), check the path in `QTINCLUDES` and make sure they exist on
-your system. Your system may put the include files at a different location. If
-so, locate the header files `find / -name QTHEADER.h` (where the QTHEADER.h is
-the header file you are looking for) and fix the path in `QTINCLUDES`
+your system. Your system may put the include files at a different location.
+The makefile currently tries to locate the Qt header files using the following
+command:
+```
+$qmake -query QT_INSTALL_HEADERS
+```
+
+If this fails, try locate the header files using the following command:
+``` find / -name QTHEADER.h` (where the QTHEADER.h ```
+Using the results fix the path in `QT_HEADERS` variable in the `demo/Makefile`
+
 
 ## Running
 If the build is successful, run the simulator using the following command
