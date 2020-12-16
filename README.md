@@ -28,11 +28,13 @@ your system. Your system may put the include files at a different location.
 The makefile currently tries to locate the Qt header files using the following
 command:
 ```
-$qmake -query QT_INSTALL_HEADERS
+$ qmake -query QT_INSTALL_HEADERS
 ```
 
 If this fails, try locate the header files using the following command:
-``` find / -name QTHEADER.h` (where the QTHEADER.h ```
+```
+$ find / -name QTHEADER.h` (where the QTHEADER.h the compiler is looking for)
+```
 Using the results fix the path in `QT_HEADERS` variable in the `demo/Makefile`
 
 
