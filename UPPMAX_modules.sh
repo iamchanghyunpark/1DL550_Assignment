@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module load gcc/6.4.0
+
 module load ABINIT/8.10.3
 
 module load Qt5/5.13.1-GCCcore-8.3.0
