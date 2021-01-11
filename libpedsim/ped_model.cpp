@@ -11,7 +11,7 @@
 #include <iostream>
 #include <stack>
 #include <algorithm>
-//#include "cuda_testkernel.h"
+#include "cuda_testkernel.h"
 #include <omp.h>
 #include <thread>
 
@@ -20,7 +20,7 @@
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
 {
 	// Convenience test: does CUDA work on this machine?
-//	cuda_test();
+	cuda_test();
 
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
