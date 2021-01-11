@@ -11,11 +11,13 @@ $ source UPPMAX_modules.sh
 ```
 
 
-If you are running on your own
-machine, please jump to the next section on installing `Qt5`, and also prepare
+**If you are running on your own
+machine**, please jump to the next section on installing `Qt5`, and also prepare
 CUDA or OpenCL on your own.
 
 ## Prerequisite: Qt5
+
+**If using UPPMAX**, skip this section.
 
 Qt5 is required to build and run the assignment. Tested with Qt5 on Ubuntu
 20.04. Installed Qt5 with the following command:
