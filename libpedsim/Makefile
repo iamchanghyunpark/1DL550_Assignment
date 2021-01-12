@@ -3,8 +3,8 @@ SOURCES = $(shell echo *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 CUDA_SOURCES = $(shell echo *.cu)
 CUDA_OBJECTS = $(CUDA_SOURCES:.cu=.co)
-CXXFLAGS = -fPIC -shared -lm
-CUDA_NVCC_FLAGS = --compiler-options -fPIC,-shared
+CXXFLAGS = -fPIC -shared -lm -fopenmp
+CUDA_NVCC_FLAGS = --compiler-options -fPIC,-shared -fopenmp
 
 all: $(TARGET)
 
