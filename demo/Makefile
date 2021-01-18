@@ -31,4 +31,4 @@ $(TARGET): $(OBJECTS) $(MOCFILES)
 	moc $(DEFINES) $(INCPATH) -i $< -o $@
 
 clean:
-	rm $(TARGET) $(OBJECTS) $(MOCFILES)
+	-rm $(TARGET) $(OBJECTS) $(MOCFILES)
