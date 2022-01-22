@@ -35,12 +35,53 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	setupHeatmapSeq();
 }
 
+// finns det nagot battre satt att launcha en vektor med tradar
+// hur resonerar vi kring olika modeller kring hur vi paralleliserar
+// vad raknas som tva separata verisioner for fraga B
+
 void Ped::Model::tick()
 {
-	for (Tagent* a : agents) {
-		a->computeNextDesiredPosition();
-		a->setX( a->getDesiredX() );
-		a->setY( a->getDesiredY() );
+	int option = 0;
+	switch(option) {
+		case 0: { //SERIAL
+				for (Tagent* a : agents) {
+					a->computeNextDesiredPosition();
+					a->setX( a->getDesiredX() );
+					a->setY( a->getDesiredY() );
+				}
+				break;
+				}
+		case 1: { //C++ Threads
+				auto f = [](std::vector<Ped::Tagent*> agents, int first, int last) -> void {
+					for (int i = first; i < last; i++) {
+						Tagent* a = agents[i];
+						a->computeNextDesiredPosition();
+						a->setX( a->getDesiredX() );
+						a->setY( a->getDesiredY() );
+					}
+				};
+
+				int num_threads = 2;
+		
+				std::vector<std::thread> threads;	
+
+				// Launch threads
+				std::thread t1(f, agents, 0, 1);
+				std::thread t2(f, agents, 1, agents.size());
+
+				// Add threads to threads vector
+				threads.push_back(std::move(t1));
+				threads.push_back(std::move(t2));
+
+				for (int i = 0; i < threads.size(); i++) {
+					threads[i].join();
+				}
+				break;
+			}
+		case 2: { //OpenMP
+		}
+		default:
+			break;	
 	}
 }
 
