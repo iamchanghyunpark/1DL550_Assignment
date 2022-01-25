@@ -41,7 +41,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 void Ped::Model::tick()
 {
-	int option = 2;
+	int option = 1;
 	switch(option) {
 		case 0: { //SERIAL
 				for (Tagent* a : agents) {
@@ -52,6 +52,7 @@ void Ped::Model::tick()
 				break;
 				}
 		case 1: { //C++ Threads
+				// lambda function given to a thread
 				auto f = [](std::vector<Ped::Tagent*> agents, int first, int last) -> void {
 					for (int i = first; i < last; i++) {
 						Tagent* a = agents[i];
@@ -62,17 +63,27 @@ void Ped::Model::tick()
 				};
 
 				int num_threads = 2;
-		
+				int thread_work = agents.size()/num_threads;
+				int curr_work_index = 0; // to keep track of "how much work"/what agents have been assigned to threads
+				
 				std::vector<std::thread> threads;	
 
-				// Launch threads
-				std::thread t1(f, agents, 0, 1);
-				std::thread t2(f, agents, 1, agents.size());
-
-				// Add threads to threads vector
-				threads.push_back(std::move(t1));
-				threads.push_back(std::move(t2));
-
+				for (int i = 0; i < num_threads; i++)
+				{
+					// edge case when there's a request for only one thread or the last thread, in this case perform the remaining work
+					if (i == num_threads-1)
+					{
+						std::thread t(f, agents, curr_work_index, agents.size());
+						threads.push_back(std::move(t)); 
+					}
+					else
+					{
+						std::thread t(f, agents, curr_work_index, thread_work);
+						threads.push_back(std::move(t));
+						curr_work_index += thread_work;
+					}
+				} 			
+	
 				for (int i = 0; i < threads.size(); i++) {
 					threads[i].join();
 				}
