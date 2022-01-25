@@ -41,7 +41,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 void Ped::Model::tick()
 {
-	int option = 0;
+	int option = 2;
 	switch(option) {
 		case 0: { //SERIAL
 				for (Tagent* a : agents) {
@@ -79,6 +79,14 @@ void Ped::Model::tick()
 				break;
 			}
 		case 2: { //OpenMP
+				#pragma omp parallel for
+					for (int i = 0; i < agents.size(); i++) {
+						Tagent* a = agents[i];
+						a->computeNextDesiredPosition();
+						a->setX( a->getDesiredX() );
+						a->setY( a->getDesiredY() );
+					}
+				break;		
 		}
 		default:
 			break;	
