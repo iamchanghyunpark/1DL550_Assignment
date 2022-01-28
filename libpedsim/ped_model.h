@@ -61,6 +61,19 @@ namespace Ped{
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
 
+		// Structure of arrays
+		// Current X coordinate of agent
+		std::vector<int> agentX;
+		// Current Y coordinate of agent
+		std::vector<int> agentY;
+		
+		// TWaypoint x and y coordinates
+		std::vector<int> tWPX;
+		std::vector<int> tWPY;
+		
+		// Bool vector containing whether a given agent has reached their TWaypoint
+		std::vector<int> destinationReached; 
+
 		// Moves an agent towards its next position
 		void move(Ped::Tagent *agent);
 

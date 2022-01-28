@@ -14,7 +14,7 @@
 #include "cuda_testkernel.h"
 #include <omp.h>
 #include <thread>
-
+#include <emmintrin.h>
 #include <stdlib.h>
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
@@ -25,6 +25,20 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
+	// Pick out X-coordinates of all agents and add the X vector
+	int index = 0;
+	for (Tagent* a : agents) {
+		agentX[index] = a->getX();
+		agentY[index] = a->getY();
+	
+		tWPX[index] = a->getDesiredX();
+		tWPY[index] = a->getDesiredY();
+		
+		// assuming final destination is not reached at start
+		destinationReached[index] = false;
+			
+	}
+	
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
 
@@ -99,6 +113,14 @@ void Ped::Model::tick()
 					}
 				break;		
 		}
+		case 3: { //SIMD				
+			for (Tagent* a : agents) {
+				a->computeNextDesiredPosition();
+				a->setX( a->getDesiredX() );
+				a->setY( a->getDesiredY() );
+			}
+			break;
+			}
 		default:
 			break;	
 	}
