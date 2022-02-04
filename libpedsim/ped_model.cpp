@@ -16,6 +16,8 @@
 #include <thread>
 #include <emmintrin.h>
 #include <stdlib.h>
+#include <math.h>
+#include <deque>
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
 {
@@ -25,20 +27,23 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
-	// Pick out X-coordinates of all agents and add the X vector
-	int index = 0;
-	for (Tagent* a : agents) {
-		agentX[index] = a->getX();
-		agentY[index] = a->getY();
-	
-		tWPX[index] = a->getDesiredX();
-		tWPY[index] = a->getDesiredY();
-		
-		// assuming final destination is not reached at start
-		destinationReached[index] = false;
-			
+	size_t agentsSize = agents.size();
+	agentX = (int*) malloc(agentsSize * sizeof(int));
+	agentY = (int*) malloc(agentsSize * sizeof(int));
+	destX = (int*) malloc(agentsSize * sizeof(int));
+	destY = (int*) malloc(agentsSize * sizeof(int));
+	destR = (int*) malloc(agentsSize * sizeof(int));
+	destinationReached = (bool*) malloc(agentsSize * sizeof(bool));	
+
+	for (int i = 0; i < agentsSize; i++) {
+		agentX[i] = agents[i]->getX();
+		agentY[i] = agents[i]->getY();
+		agents[i]->computeNextDesiredPosition();
+		Twaypoint* destination = agents[i]->getDest();
+		destX[i] = destination->getx();
+		destY[i] = destination->gety();
+		destR[i] = destination->getr();
 	}
-	
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
 
@@ -55,7 +60,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 void Ped::Model::tick()
 {
-	int option = 1;
+	int option = 3;
 	switch(option) {
 		case 0: { //SERIAL
 				for (Tagent* a : agents) {
@@ -113,12 +118,56 @@ void Ped::Model::tick()
 					}
 				break;		
 		}
-		case 3: { //SIMD				
-			for (Tagent* a : agents) {
-				a->computeNextDesiredPosition();
-				a->setX( a->getDesiredX() );
-				a->setY( a->getDesiredY() );
-			}
+		case 3: { //SIMD
+
+				
+				size_t agentsSize = agents.size();
+				
+				double diffX[agentsSize];
+				double diffY[agentsSize];
+				double length[agentsSize];
+				
+				for (int i = 0; i < agentsSize; i++) {
+					diffX[i] = destX[i] - agentX[i];
+					diffY[i] = destY[i] - agentY[i];
+					length[i] = sqrt(diffX[i]*diffX[i] + diffY[i]*diffY[i]);	
+					
+					// check if any agent has reached their destination
+					destinationReached[i] = length[i] < destR[i];
+				}
+					
+				// It's possible to apply OpenMP to this loop
+				// Checks if a given agent has reached its destination, in that case, a new destination is calculated and stored to align memory for that agent
+				for (int i = 0; i < agentsSize; i++) {
+
+					Twaypoint* oldDestination = agents[i]->getDest();
+
+					if(destinationReached[i] || oldDestination == NULL) {
+
+                				Twaypoint* nextDestination = agents[i]->getNewDestination();
+
+						if (nextDestination == NULL) {
+							//std::cout << "nextDestination is NULL\n";
+						} else {
+							destX[i] = nextDestination->getx();
+							destY[i] = nextDestination->gety();
+							destR[i] = nextDestination->getr();
+							agents[i]->setDestination(nextDestination);
+						}
+
+					}
+				}
+
+				// OpenMP TODO
+				for (int i = 0; i < agentsSize; i++) {
+					agentX[i] = (int)round(agentX[i] + diffX[i] / length[i]);
+					agentY[i] = (int)round(agentY[i] + diffY[i] / length[i]);
+					agents[i]->setX(agentX[i]);
+					agents[i]->setY(agentY[i]);   
+				}
+
+				
+			
 			break;
 			}
 		default:
