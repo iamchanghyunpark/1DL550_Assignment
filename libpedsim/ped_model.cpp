@@ -198,6 +198,7 @@ void Ped::Model::tick()
 	
 				
 				// OpenMP TODO
+				#pragma omp parallel for
 				// Set new coordinates for agent
 				for (int i = 0; i < agentsSize; i++) {
 					agents[i]->setX( (int) agentX[i]);
@@ -206,6 +207,7 @@ void Ped::Model::tick()
 				
 				
 				// OpenMP TODO
+				#pragma omp parallel for
 				// Stores as well as sets new destination for agent
 				//
 				// "Checks if a given agent has reached its destination, in that 
