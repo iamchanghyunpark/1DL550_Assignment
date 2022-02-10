@@ -136,26 +136,25 @@ void Ped::Model::tick()
 				double diffY[agentsSize] __attribute__ ((aligned(16)));
 				double length[agentsSize] __attribute__ ((aligned(16)));
 			
-				__m128 diffX0, diffY0, destX0, destY0, destR0, length0
+				__m128 agentX0, agentY0, diffX0, diffY0, destX0, destY0, destR0, length0;
 
 				// Load data into registers
 				for (int i = 0; i < agentsSize; i++) {
 
-					length0 = _mm_load_ps(&length[i]);
 					
 					// register with x coordinate destinations
-					destX0 = _mm_load_ps(&destX[i]);
+					//destX0 = _mm_load_ps(&destX[i]);
 					// register with y coordinate destinations
-					destY0 = _mm_load_ps(&destY[i]);
+					//destY0 = _mm_load_ps(&destY[i]);
 					// register with destination radii
-					destR0 = _mm_load_ps(&destR[i]);
+					//destR0 = _mm_load_ps(&destR[i]);
 					// current x coordinates for agents
-					agentX0 = _mm_load_ps(&agentX[i]);
+					//agentX0 = _mm_load_ps(&agentX[i]);
 					// current y coordinates for agents
-					agentY0 = _mm_load_ps(&agentY[i]);
+					//agentY0 = _mm_load_ps(&agentY[i]);
 					
-					diffX0 = _mm_sub_ps(destX0, agentX0);
-					diffY0 = _mm_sub_ps(destY0, agentY0);
+					//diffX0 = _mm_sub_ps(destX0, agentX0);
+					//diffY0 = _mm_sub_ps(destY0, agentY0);
 				}
 
 				for (int i = 0; i < agentsSize; i++) {
