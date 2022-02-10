@@ -35,12 +35,12 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	//destR = (int*) malloc(agentsSize * sizeof(int));
 	//destinationReached = (bool*) malloc(agentsSize * sizeof(bool));	
 
-	agentX = (float*) _mm_malloc(agentsSize * sizeof(float), 16);
-	agentY = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);
-	destX = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);
-	destY = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);
-	destR = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);
-	destinationReached = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);	
+	agentX = (float *) _mm_malloc(agentsSize * sizeof(float), 16);
+	agentY = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
+	destX = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
+	destY = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
+	destR = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
+	destinationReached = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);	
 
 
 
@@ -138,15 +138,24 @@ void Ped::Model::tick()
 			
 				__m128 diffX0, diffY0, destX0, destY0, destR0, length0
 
+				// Load data into registers
 				for (int i = 0; i < agentsSize; i++) {
-					//diffX0 = _mm_load_ps(&diffX[i]);
-					//diffY0 = _mm_load_ps(&diffY[i]);
+
 					length0 = _mm_load_ps(&length[i]);
+					
+					// register with x coordinate destinations
 					destX0 = _mm_load_ps(&destX[i]);
+					// register with y coordinate destinations
 					destY0 = _mm_load_ps(&destY[i]);
+					// register with destination radii
 					destR0 = _mm_load_ps(&destR[i]);
+					// current x coordinates for agents
 					agentX0 = _mm_load_ps(&agentX[i]);
+					// current y coordinates for agents
 					agentY0 = _mm_load_ps(&agentY[i]);
+					
+					diffX0 = _mm_sub_ps(destX0, agentX0);
+					diffY0 = _mm_sub_ps(destY0, agentY0);
 				}
 
 				for (int i = 0; i < agentsSize; i++) {
@@ -159,7 +168,8 @@ void Ped::Model::tick()
 				}
 					
 				// It's possible to apply OpenMP to this loop
-				// Checks if a given agent has reached its destination, in that case, a new destination is calculated and stored to align memory for that agent
+				// Checks if a given agent has reached its destination, in that 
+				// case, a new destination is calculated and stored to align memory for that agent
 				for (int i = 0; i < agentsSize; i++) {
 
 					Twaypoint* oldDestination = agents[i]->getDest();
