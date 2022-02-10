@@ -132,13 +132,14 @@ void Ped::Model::tick()
 
 				
 				size_t agentsSize = agents.size();
-				
+			
+				// Create aligned stack variables	
 				float diffX[agentsSize] __attribute__ ((aligned(16)));
 				float diffY[agentsSize] __attribute__ ((aligned(16)));
 				float length[agentsSize] __attribute__ ((aligned(16)));
 
-				__m128 diffX0, diffY0, destX0, destY0, destR0, length0, destReached0;
-				__m128 agentX0, agentY0;
+				// Initiate register variables
+				__m128 diffX0, diffY0, destX0, destY0, destR0, length0, destReached0, agentX0, agentY0;
 				
 				for (int i = 0; i < agentsSize; i+=4) {
 
@@ -160,16 +161,22 @@ void Ped::Model::tick()
 					// calculate difference between current and destination Y-coordinate
 					diffY0 = _mm_sub_ps(destY0, agentY0);
 					// calculate distance to destination
+					// corresponds to
+					// "length0 = sqrt ( diffX0 * diffX0 + diffY0 * diffY0 )"
 					length0 = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(diffX0, diffX0), _mm_mul_ps(diffY0, diffY0)));
-					// verify whether agent has reached destination
+					// verify whether agent has reached destination, i.e. checks if length0 < destR
 					destReached0 = _mm_cmplt_ps(length0, destR0);
 				
 				
 					// Update agent's coordinates 
 					
 					// calculate new x-coordinate for agent
+					// corresponds to
+					// "agentX0 = round ( agentX0 + ( diffX0 / length0 ) )"
 					agentX0 = _mm_round_ps(_mm_add_ps(agentX0, _mm_div_ps(diffX0, length0)), _MM_FROUND_TO_NEAREST_INT);
 					// calculate new y-coordinate for agent
+					// corresponds to
+					// "agentY0 = round ( agentY0 + ( diffY0 / length0 ) )"
 					agentY0 = _mm_round_ps(_mm_add_ps(agentY0, _mm_div_ps(diffY0, length0)), _MM_FROUND_TO_NEAREST_INT);
 				
 	
@@ -193,8 +200,6 @@ void Ped::Model::tick()
 				// OpenMP TODO
 				// Set new coordinates for agent
 				for (int i = 0; i < agentsSize; i++) {
-					//agentX[i] = round(agentX[i] + diffX[i] / length[i]);
-					//agentY[i] = round(agentY[i] + diffY[i] / length[i]);
 					agents[i]->setX( (int) agentX[i]);
 					agents[i]->setY( (int) agentY[i]);   
 				}
@@ -225,20 +230,8 @@ void Ped::Model::tick()
 
 					}
 				}
-
-				
-
-				//for (int i = 0; i < agentsSize; i++) {
-				//	diffX[i] = destX[i] - agentX[i];
-				//	diffY[i] = destY[i] - agentY[i];
-				//	length[i] = sqrt(diffX[i]*diffX[i] + diffY[i]*diffY[i]);	
-				//	
-				//	// check if any agent has reached their destination
-				//	destinationReached[i] = length[i] < destR[i];
-				//}
-					
-			
 			break;
+			
 			}
 		default:
 			break;	
