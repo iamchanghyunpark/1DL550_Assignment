@@ -28,12 +28,21 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
 	size_t agentsSize = agents.size();
-	agentX = (int*) malloc(agentsSize * sizeof(int));
-	agentY = (int*) malloc(agentsSize * sizeof(int));
-	destX = (int*) malloc(agentsSize * sizeof(int));
-	destY = (int*) malloc(agentsSize * sizeof(int));
-	destR = (int*) malloc(agentsSize * sizeof(int));
-	destinationReached = (bool*) malloc(agentsSize * sizeof(bool));	
+	//agentX = (int*) malloc(agentsSize * sizeof(int));
+	//agentY = (int*) malloc(agentsSize * sizeof(int));
+	//destX = (int*) malloc(agentsSize * sizeof(int));
+	//destY = (int*) malloc(agentsSize * sizeof(int));
+	//destR = (int*) malloc(agentsSize * sizeof(int));
+	//destinationReached = (bool*) malloc(agentsSize * sizeof(bool));	
+
+	agentX = (float*) _mm_malloc(agentsSize * sizeof(float), 16);
+	agentY = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);
+	destX = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);
+	destY = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);
+	destR = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);
+	destinationReached = (float*)  _mm_malloc(agentsSize * sizeof(float), 16);	
+
+
 
 	for (int i = 0; i < agentsSize; i++) {
 		agentX[i] = agents[i]->getX();
@@ -123,10 +132,23 @@ void Ped::Model::tick()
 				
 				size_t agentsSize = agents.size();
 				
-				double diffX[agentsSize];
-				double diffY[agentsSize];
-				double length[agentsSize];
-				
+				double diffX[agentsSize] __attribute__ ((aligned(16)));
+				double diffY[agentsSize] __attribute__ ((aligned(16)));
+				double length[agentsSize] __attribute__ ((aligned(16)));
+			
+				__m128 diffX0, diffY0, destX0, destY0, destR0, length0
+
+				for (int i = 0; i < agentsSize; i++) {
+					//diffX0 = _mm_load_ps(&diffX[i]);
+					//diffY0 = _mm_load_ps(&diffY[i]);
+					length0 = _mm_load_ps(&length[i]);
+					destX0 = _mm_load_ps(&destX[i]);
+					destY0 = _mm_load_ps(&destY[i]);
+					destR0 = _mm_load_ps(&destR[i]);
+					agentX0 = _mm_load_ps(&agentX[i]);
+					agentY0 = _mm_load_ps(&agentY[i]);
+				}
+
 				for (int i = 0; i < agentsSize; i++) {
 					diffX[i] = destX[i] - agentX[i];
 					diffY[i] = destY[i] - agentY[i];
