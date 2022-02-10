@@ -12,6 +12,8 @@
 #include <stack>
 #include <algorithm>
 #include "cuda_testkernel.h"
+#include <cuda.h>
+#include <cuda_runtime_api.h>
 #include <omp.h>
 #include <thread>
 #include <emmintrin.h>
@@ -29,20 +31,13 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
 	size_t agentsSize = agents.size();
-	//agentX = (int*) malloc(agentsSize * sizeof(int));
-	//agentY = (int*) malloc(agentsSize * sizeof(int));
-	//destX = (int*) malloc(agentsSize * sizeof(int));
-	//destY = (int*) malloc(agentsSize * sizeof(int));
-	//destR = (int*) malloc(agentsSize * sizeof(int));
-	//destinationReached = (bool*) malloc(agentsSize * sizeof(bool));	
-
+	// 16-bit aligned allocations
 	agentX = (float *) _mm_malloc(agentsSize * sizeof(float), 16);
 	agentY = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
 	destX = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
 	destY = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
 	destR = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
 	destinationReached = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);	
-
 
 
 	for (int i = 0; i < agentsSize; i++) {
@@ -64,13 +59,10 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	setupHeatmapSeq();
 }
 
-// finns det nagot battre satt att launcha en vektor med tradar
-// hur resonerar vi kring olika modeller kring hur vi paralleliserar
-// vad raknas som tva separata verisioner for fraga B
 
 void Ped::Model::tick()
 {
-	int option = 3;
+	int option = 4;
 	switch(option) {
 		case 0: { //SERIAL
 				for (Tagent* a : agents) {
@@ -197,19 +189,16 @@ void Ped::Model::tick()
 				}
 	
 				
-				// OpenMP TODO
-				#pragma omp parallel for
 				// Set new coordinates for agent
+				#pragma omp parallel for
 				for (int i = 0; i < agentsSize; i++) {
 					agents[i]->setX( (int) agentX[i]);
 					agents[i]->setY( (int) agentY[i]);   
 				}
 				
 				
-				// OpenMP TODO
-				#pragma omp parallel for
 				// Stores as well as sets new destination for agent
-				//
+				#pragma omp parallel for
 				// "Checks if a given agent has reached its destination, in that 
 				// case a new destination is calculated and stored to aligned memory.
 				// The new destination is also set as the agent's current destination"
@@ -235,7 +224,7 @@ void Ped::Model::tick()
 			break;
 			
 			}
-		default:
+	default:
 			break;	
 	}
 }
