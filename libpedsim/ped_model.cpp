@@ -49,9 +49,9 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 		agentY[i] = agents[i]->getY();
 		agents[i]->computeNextDesiredPosition();
 		Twaypoint* destination = agents[i]->getDest();
-		destX[i] = destination->getx();
-		destY[i] = destination->gety();
-		destR[i] = destination->getr();
+		destX[i] = (float) destination->getx();
+		destY[i] = (float) destination->gety();
+		destR[i] = (float) destination->getr();
 	}
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
@@ -132,39 +132,49 @@ void Ped::Model::tick()
 				
 				size_t agentsSize = agents.size();
 				
-				double diffX[agentsSize] __attribute__ ((aligned(16)));
-				double diffY[agentsSize] __attribute__ ((aligned(16)));
-				double length[agentsSize] __attribute__ ((aligned(16)));
+				float diffX[agentsSize] __attribute__ ((aligned(16)));
+				float diffY[agentsSize] __attribute__ ((aligned(16)));
+				float length[agentsSize] __attribute__ ((aligned(16)));
 			
-				__m128 agentX0, agentY0, diffX0, diffY0, destX0, destY0, destR0, length0;
+				__m128 agentX0, agentY0, diffX0, diffY0, destX0, destY0, destR0, length0, destReached0;
 
 				// Load data into registers
-				for (int i = 0; i < agentsSize; i++) {
+				for (int i = 0; i < agentsSize; i+=4) {
 
 					
 					// register with x coordinate destinations
-					//destX0 = _mm_load_ps(&destX[i]);
+					destX0 = _mm_load_ps(&destX[i]);
 					// register with y coordinate destinations
-					//destY0 = _mm_load_ps(&destY[i]);
+					destY0 = _mm_load_ps(&destY[i]);
 					// register with destination radii
-					//destR0 = _mm_load_ps(&destR[i]);
+					destR0 = _mm_load_ps(&destR[i]);
 					// current x coordinates for agents
-					//agentX0 = _mm_load_ps(&agentX[i]);
+					agentX0 = _mm_load_ps(&agentX[i]);
 					// current y coordinates for agents
-					//agentY0 = _mm_load_ps(&agentY[i]);
+					agentY0 = _mm_load_ps(&agentY[i]);
+					// calculate difference between current and destination X-coordinate
+					diffX0 = _mm_sub_ps(destX0, agentX0);
+					// calculate difference between current and destination Y-coordinate
+					diffY0 = _mm_sub_ps(destY0, agentY0);
+					// calculate distance to destination
+					length0 = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(diffX0, diffX0), _mm_mul_ps(diffY0, diffY0)));
+					// verify whether agent has reached destination
+					destReached0 = _mm_cmplt_ps(length0, destR0);
 					
-					//diffX0 = _mm_sub_ps(destX0, agentX0);
-					//diffY0 = _mm_sub_ps(destY0, agentY0);
-				}
+					_mm_store_ps(&diffX[i], diffX0);
+					_mm_store_ps(&diffY[i], diffY0);
+					_mm_store_ps(&length[i], length0);
+					_mm_store_ps(&destinationReached[i], destReached0);
+				}	
 
-				for (int i = 0; i < agentsSize; i++) {
-					diffX[i] = destX[i] - agentX[i];
-					diffY[i] = destY[i] - agentY[i];
-					length[i] = sqrt(diffX[i]*diffX[i] + diffY[i]*diffY[i]);	
-					
-					// check if any agent has reached their destination
-					destinationReached[i] = length[i] < destR[i];
-				}
+				//for (int i = 0; i < agentsSize; i++) {
+				//	diffX[i] = destX[i] - agentX[i];
+				//	diffY[i] = destY[i] - agentY[i];
+				//	length[i] = sqrt(diffX[i]*diffX[i] + diffY[i]*diffY[i]);	
+				//	
+				//	// check if any agent has reached their destination
+				//	destinationReached[i] = length[i] < destR[i];
+				//}
 					
 				// It's possible to apply OpenMP to this loop
 				// Checks if a given agent has reached its destination, in that 
