@@ -32,12 +32,12 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 	size_t agentsSize = agents.size();
 	// 16-bit aligned allocations
-	agentX = (float *) _mm_malloc(agentsSize * sizeof(float), 16);
-	agentY = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
-	destX = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
-	destY = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
-	destR = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);
-	destinationReached = (float *)  _mm_malloc(agentsSize * sizeof(float), 16);	
+	agentX = (float *) _mm_malloc((agentsSize + 2) * sizeof(float), 16);
+	agentY = (float *)  _mm_malloc((agentsSize + 2) * sizeof(float), 16);
+	destX = (float *)  _mm_malloc((agentsSize + 2) * sizeof(float), 16);
+	destY = (float *)  _mm_malloc((agentsSize + 2) * sizeof(float), 16);
+	destR = (float *)  _mm_malloc((agentsSize + 2) * sizeof(float), 16);
+	destinationReached = (float *)  _mm_malloc((agentsSize + 2) * sizeof(float), 16);	
 
 
 	for (int i = 0; i < agentsSize; i++) {
@@ -62,7 +62,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 void Ped::Model::tick()
 {
-	int option = 4;
+	int option = 3;
 	switch(option) {
 		case 0: { //SERIAL
 				for (Tagent* a : agents) {
@@ -132,7 +132,8 @@ void Ped::Model::tick()
 
 				// Initiate register variables
 				__m128 diffX0, diffY0, destX0, destY0, destR0, length0, destReached0, agentX0, agentY0;
-				
+			//	__m128 t0, t1, t2, agentX0, agentY0, diffX0, diffY0;  
+	
 				for (int i = 0; i < agentsSize; i+=4) {
 
 					
@@ -140,25 +141,33 @@ void Ped::Model::tick()
 					
 					// register with x coordinate destinations
 					destX0 = _mm_load_ps(&destX[i]);
+				//	t0 = _mm_load_ps(&destX[i]);
 					// register with y coordinate destinations
 					destY0 = _mm_load_ps(&destY[i]);
+				//	t1 = _mm_load_ps(&destY[i]);
 					// register with destination radii
 					destR0 = _mm_load_ps(&destR[i]);
+				//	t2 = _mm_load_ps(&destR[i]);
 					// current x coordinates for agents
 					agentX0 = _mm_load_ps(&agentX[i]);
 					// current y coordinates for agents
 					agentY0 = _mm_load_ps(&agentY[i]);
 					// calculate difference between current and destination X-coordinate
 					diffX0 = _mm_sub_ps(destX0, agentX0);
+				//	diffX0 = _mm_sub_ps(t0, agentX0);
 					// calculate difference between current and destination Y-coordinate
 					diffY0 = _mm_sub_ps(destY0, agentY0);
+				//	diffY0 = _mm_sub_ps(t1, agentY0);
+					
 					// calculate distance to destination
 					// corresponds to
 					// "length0 = sqrt ( diffX0 * diffX0 + diffY0 * diffY0 )"
 					length0 = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(diffX0, diffX0), _mm_mul_ps(diffY0, diffY0)));
+				//	t0 = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(diffX0, diffX0), _mm_mul_ps(diffY0, diffY0)));
 					// verify whether agent has reached destination, i.e. checks if length0 < destR
 					destReached0 = _mm_cmplt_ps(length0, destR0);
-				
+				//	t1 = _mm_cmplt_ps(t0, t2);
+	
 				
 					// Update agent's coordinates 
 					
@@ -166,22 +175,25 @@ void Ped::Model::tick()
 					// corresponds to
 					// "agentX0 = round ( agentX0 + ( diffX0 / length0 ) )"
 					agentX0 = _mm_round_ps(_mm_add_ps(agentX0, _mm_div_ps(diffX0, length0)), _MM_FROUND_TO_NEAREST_INT);
+				//	agentX0 = _mm_round_ps(_mm_add_ps(agentX0, _mm_div_ps(diffX0, t0)), _MM_FROUND_TO_NEAREST_INT);
 					// calculate new y-coordinate for agent
 					// corresponds to
 					// "agentY0 = round ( agentY0 + ( diffY0 / length0 ) )"
 					agentY0 = _mm_round_ps(_mm_add_ps(agentY0, _mm_div_ps(diffY0, length0)), _MM_FROUND_TO_NEAREST_INT);
+				//	agentY0 = _mm_round_ps(_mm_add_ps(agentY0, _mm_div_ps(diffY0, t0)), _MM_FROUND_TO_NEAREST_INT);
 				
 	
 					// store new values into respective storage on heap / stack
 					
 					// Stores difference between current and destination X-coordinate to stack variable
-					_mm_store_ps(&diffX[i], diffX0);
+				//	_mm_store_ps(&diffX[i], diffX0);
 					// Stores difference between current and destination Y-coordinate to stack variable
-					_mm_store_ps(&diffY[i], diffY0);
+				//	_mm_store_ps(&diffY[i], diffY0);
 					// Stores the distance between the agent and its destination to stack variable
-					_mm_store_ps(&length[i], length0);
+				//	_mm_store_ps(&length[i], length0);
 					// Stores whether an agent has reached its destination to the heap
 					_mm_store_ps(&destinationReached[i], destReached0);
+				//	_mm_store_ps(&destinationReached[i], t1);
 					// Stores an agent's new X-coordiante to the heap 
 					_mm_store_ps(&agentX[i], agentX0);
 					// Stores an agent's new Y-coordiante to the heap
@@ -192,6 +204,9 @@ void Ped::Model::tick()
 				// Set new coordinates for agent
 				#pragma omp parallel for
 				for (int i = 0; i < agentsSize; i++) {
+				//	agentX[i] = round (agentX[i] + diffX[i] / length[i]);
+				//	agentY[i] = round (agentY[i] + diffY[i] / length[i]);
+
 					agents[i]->setX( (int) agentX[i]);
 					agents[i]->setY( (int) agentY[i]);   
 				}
@@ -302,7 +317,13 @@ set<const Ped::Tagent*> Ped::Model::getNeighbors(int x, int y, int dist) const {
 }
 
 void Ped::Model::cleanup() {
-	// Nothing to do here right now. 
+	// Nothing to do here right now.
+	free(agentX);
+	free(agentY);
+	free(destX);
+	free(destY);
+	free(destR);
+	free(destinationReached);
 }
 
 Ped::Model::~Model()
