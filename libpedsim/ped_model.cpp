@@ -38,6 +38,12 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 void Ped::Model::tick()
 {
 	// EDIT HERE FOR ASSIGNMENT 1
+	const std::vector<Tagent *> all_agents = getAgents();
+	for (Tagent *agent: all_agents) {
+		agent->setX(agent->getDesiredX());
+		agent->setY(agent->getDesiredY());
+		agent->computeNextDesiredPosition();
+	}
 }
 
 ////////////
