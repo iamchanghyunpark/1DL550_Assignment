@@ -35,16 +35,66 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	setupHeatmapSeq();
 }
 
+void action(std::vector<Ped::Tagent *> allAgents, int start, int end)
+{
+	for (int i = start; i < end; i++) {
+		allAgents[i]->computeNextDesiredPosition();
+		allAgents[i]->setX(allAgents[i]->getDesiredX());
+		allAgents[i]->setY(allAgents[i]->getDesiredY());
+	}
+}
+
 void Ped::Model::tick()
 {
 	// EDIT HERE FOR ASSIGNMENT 1
-	const std::vector<Tagent *> all_agents = getAgents();
-	for (Tagent *agent: all_agents) {
-		agent->setX(agent->getDesiredX());
-		agent->setY(agent->getDesiredY());
-		agent->computeNextDesiredPosition();
+	// Retrieve vector of all agents
+	const std::vector<Tagent *> allAgents = getAgents();
+
+	if(this->implementation == SEQ) {
+		for (Tagent *agent: allAgents) {
+			agent->computeNextDesiredPosition();
+			agent->setX(agent->getDesiredX());
+			agent->setY(agent->getDesiredY());
+		}
+	}
+	if(this->implementation == OMP) {
+		#pragma omp parallel for default(none) shared(allAgents) num_threads(4)
+		for (Tagent *agent: allAgents) {
+			agent->computeNextDesiredPosition();
+			agent->setX(agent->getDesiredX());
+			agent->setY(agent->getDesiredY());
+		}
+	}	
+	if(this->implementation == PTHREAD) {
+		int numThreads = 4;
+		int offset = 0;
+		std::thread threads[numThreads];
+		int agentsPerThread = (int) allAgents.size() / numThreads;
+		if(allAgents.size() % numThreads == 0)
+		{
+			for(int i = 0; i < numThreads; i++) {
+				threads[i]= std::thread(action, allAgents, offset, (offset + agentsPerThread));
+				offset = offset + agentsPerThread;
+			}
+		}
+		else 
+		{
+			for(int i = 0; i < numThreads-1; i++) {
+				threads[i]= std::thread(action, allAgents, offset, (offset + agentsPerThread));
+				offset = offset + agentsPerThread;
+			}
+
+			if(offset < allAgents.size()) {
+				threads[numThreads-1] = std::thread(action, allAgents, offset, allAgents.size());
+			}
+		}
+
+		for(int i = 0; i < numThreads; i++) {
+			threads[i].join();
+		}
 	}
 }
+
 
 ////////////
 /// Everything below here relevant for Assignment 3.
