@@ -46,25 +46,16 @@ void action(std::vector<Ped::Tagent *> allAgents, int start, int end)
 
 void Ped::Model::tick()
 {
-	// EDIT HERE FOR ASSIGNMENT 1
+
+	//To choose which implementation to run, change line 70 in the main file located in the demo folder
+	//Change the last argument for the setup function to whichever implementation you want to run
+	//Example: model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ);   will run sequential version
+	// model.setup(parser.getAgents(), parser.getWaypoints(), Ped::OMP); will run the OpenMP version
+	
 	// Retrieve vector of all agents
 	const std::vector<Tagent *> allAgents = getAgents();
 
-	if(this->implementation == SEQ) {
-		for (Tagent *agent: allAgents) {
-			agent->computeNextDesiredPosition();
-			agent->setX(agent->getDesiredX());
-			agent->setY(agent->getDesiredY());
-		}
-	}
-	if(this->implementation == OMP) {
-		#pragma omp parallel for default(none) shared(allAgents) num_threads(4)
-		for (Tagent *agent: allAgents) {
-			agent->computeNextDesiredPosition();
-			agent->setX(agent->getDesiredX());
-			agent->setY(agent->getDesiredY());
-		}
-	}	
+	//C++ THREAD IMPLEMENTATION
 	if(this->implementation == PTHREAD) {
 		int numThreads = 4;
 		int offset = 0;
@@ -93,6 +84,24 @@ void Ped::Model::tick()
 			threads[i].join();
 		}
 	}
+	//SEQUENTIAL IMPLEMENTATION
+	if(this->implementation == SEQ) {
+		for (Tagent *agent: allAgents) {
+			agent->computeNextDesiredPosition();
+			agent->setX(agent->getDesiredX());
+			agent->setY(agent->getDesiredY());
+		}
+	}
+	//OPENMP IMPLEMENTATION
+	if(this->implementation == OMP) {
+		#pragma omp parallel for default(none) shared(allAgents) num_threads(4)
+		for (Tagent *agent: allAgents) {
+			agent->computeNextDesiredPosition();
+			agent->setX(agent->getDesiredX());
+			agent->setY(agent->getDesiredY());
+		}
+	}	
+	
 }
 
 
