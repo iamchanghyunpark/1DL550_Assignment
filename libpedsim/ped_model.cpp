@@ -14,8 +14,11 @@
 #include "cuda_testkernel.h"
 #include <omp.h>
 #include <thread>
-
+#include <mm_malloc.h>
 #include <stdlib.h>
+#define SSE
+#include <emmintrin.h>
+#include <smmintrin.h>
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
 {
@@ -30,6 +33,25 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
+
+	cout << "setup";
+	// Allocate memory for x coordinates
+	x = (float *) _mm_malloc(agents.size() * sizeof(float), 16);
+
+	// Allocate memory for y coordinates
+	y = (float *) _mm_malloc(agents.size() * sizeof(float), 16);
+
+	// Allocate memory for x coordinates
+	xdes = (float *) _mm_malloc(agents.size() * sizeof(float), 16);
+
+	// Allocate memory for y coordinates
+	ydes = (float *) _mm_malloc(agents.size() * sizeof(float), 16);
+
+	// for (int i = 0; i < allAgents.size(); i++){
+	// 	allAgents[i]->computeNextDesiredPosition();
+	// 	x[i] = allAgents[i]->getDesiredX();
+	// 	y[i] = allAgents[i]->getDesiredY();
+	// }
 
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
@@ -54,6 +76,7 @@ void Ped::Model::tick()
 	
 	// Retrieve vector of all agents
 	const std::vector<Tagent *> allAgents = getAgents();
+	const std::vector<Twaypoint *> allDest = getDest();
 
 	//C++ THREAD IMPLEMENTATION
 	if(this->implementation == PTHREAD) {
@@ -100,8 +123,111 @@ void Ped::Model::tick()
 			agent->setX(agent->getDesiredX());
 			agent->setY(agent->getDesiredY());
 		}
-	}	
-	
+	}
+	//SIMD IMPLEMENTATION
+	if(this->implementation == VECTOR) {
+		x = getVecX();
+		y = getVecY();
+		xdes = getVecXdes();
+		ydes = getVecYdes();
+		for (int i = 0; i < allDest.size(); i++){
+			//allAgents[i]->computeNextDesiredPosition();
+			xdes[i] = allDest[i]->getx();
+			ydes[i] = allDest[i]->gety();	
+		}
+		
+		for (int i = 0; i < allAgents.size(); i++){
+			x[i] = allAgents[i]->getX();
+			y[i] = allAgents[i]->getY();
+		}
+
+		for (int i = 0; i < allAgents.size(); i+=4){
+			Ped::Twaypoint* nextDestination = NULL;
+			bool agentReachedDestination = false;
+			__m128 X, Y, Xdes, Ydes, Xdiff, Ydiff, Xmul, Ymul, add, sqrt;
+			if (allAgents[i]->getDestination() != NULL) {
+				X = _mm_load_ps(&xdes[i]);
+				Y = _mm_load_ps(&ydes[i]);
+				Xdes = _mm_load_ps(&x[i]); // load 4 elements of x in X
+				Ydes = _mm_load_ps(&y[i]);
+				// double diffX = destination->getx() - X;
+				// double diffY = destination->gety() - Y;
+				Xdiff = _mm_sub_ps(X, Xdes);
+				Ydiff = _mm_sub_ps(Y, Ydes);
+				// double len = iffX * diffX + diffY * diffY);
+				Xmul = _mm_mul_ps(Xdiff, Xdiff);
+				Ymul = _mm_mul_ps(Ydiff, Ydiff);
+				add = _mm_add_ps(Xmul, Ymul);
+				sqrt = _mm_sqrt_ps(add);
+				// desiredPositionY = (int)round(y + diffY / len);
+				// desiredPositionX = (int)round(x + diffX / len);
+				Xdes = _mm_add_ps(X, Xdiff);
+				Ydes = _mm_add_ps(Y, Ydiff);
+				X = _mm_div_ps(Xdes, sqrt);
+				Y = _mm_div_ps(Ydes, sqrt);
+				Xdes = _mm_round_ps(X, 0);
+				Ydes = _mm_round_ps(Y, 0);
+
+				for (int j = 0; j < 4 ; j++){
+					agentReachedDestination = sqrt[i] < allAgents[j]->getDestination()->getr();
+					if (agentReachedDestination && !allAgents[j]->getWaypoints().empty()) {
+						// Case 1: agent has reached destination (or has no current destination);
+						// get next destination if available
+						allAgents[j]->getWaypoints().push_back(allAgents[j]->getDestination());
+						nextDestination = allAgents[j]->getWaypoints().front();
+						allAgents[j]->getWaypoints().pop_front();
+					}
+					if ((agentReachedDestination || allAgents[j]->getDestination() == NULL) && !allAgents[j]->getWaypoints().empty()) {
+						// Case 1: agent has reached destination (or has no current destination);
+						// get next destination if available
+						allAgents[j]->getWaypoints().push_back(allAgents[j]->getDestination());
+						nextDestination = allAgents[j]->getWaypoints().front();
+						allAgents[j]->getWaypoints().pop_front();
+					}
+
+					else {
+						// Case 2: agent has not yet reached destination, continue to move towards
+						// current destination
+						nextDestination = allAgents[j]->getDestination();
+					}
+				}
+			}
+			if (allAgents[i]->getDestination() != NULL) {	
+				X = _mm_load_ps(&xdes[i]);
+				Y = _mm_load_ps(&ydes[i]);
+				Xdes = _mm_load_ps(&x[i]); // load 4 elements of x in X
+				Ydes = _mm_load_ps(&y[i]);
+				// double diffX = destination->getx() - X;
+				// double diffY = destination->gety() - Y;
+				Xdiff = _mm_sub_ps(X, Xdes);
+				Ydiff = _mm_sub_ps(Y, Ydes);
+				// double len = iffX * diffX + diffY * diffY);
+				Xmul = _mm_mul_ps(Xdiff, Xdiff);
+				Ymul = _mm_mul_ps(Ydiff, Ydiff);
+				add = _mm_add_ps(Xmul, Ymul);
+				sqrt = _mm_sqrt_ps(add);
+				// desiredPositionY = (int)round(y + diffY / len);
+				// desiredPositionX = (int)round(x + diffX / len);
+				Xdes = _mm_add_ps(X, Xdiff);
+				Ydes = _mm_add_ps(Y, Ydiff);
+				X = _mm_div_ps(Xdes, sqrt);
+				Y = _mm_div_ps(Ydes, sqrt);
+				Xdes = _mm_round_ps(X, 0);
+				Ydes = _mm_round_ps(Y, 0);
+			}
+			for (int j = 0; j < 4 ; j++){
+				allAgents[j]->setX(X[j]);
+				allAgents[j]->setY(Y[j]);
+				cout << "XDES" << X[j];
+				cout << "\n";
+				cout << "YDES" << Y[j];
+				cout << "\n";
+			}
+		
+		}
+
+	}
+
 }
 
 

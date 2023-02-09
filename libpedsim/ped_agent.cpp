@@ -12,16 +12,16 @@
 #include <stdlib.h>
 
 Ped::Tagent::Tagent(int posX, int posY) {
-	Ped::Tagent::init(posX, posY);
+	Ped::Tagent::init((float)posX, (float) posY);
 }
 
 Ped::Tagent::Tagent(double posX, double posY) {
-	Ped::Tagent::init((int)round(posX), (int)round(posY));
+	Ped::Tagent::init((float)round(posX), (float)round(posY));
 }
 
 void Ped::Tagent::init(int posX, int posY) {
-	x = posX;
-	y = posY;
+	x = (float) posX;
+	y = (float) posY;
 	destination = NULL;
 	lastDestination = NULL;
 }
@@ -37,8 +37,8 @@ void Ped::Tagent::computeNextDesiredPosition() {
 	double diffX = destination->getx() - x;
 	double diffY = destination->gety() - y;
 	double len = sqrt(diffX * diffX + diffY * diffY);
-	desiredPositionX = (int)round(x + diffX / len);
-	desiredPositionY = (int)round(y + diffY / len);
+	desiredPositionX = (float) round(x + diffX / len);
+	desiredPositionY = (float) round(y + diffY / len);
 }
 
 void Ped::Tagent::addWaypoint(Twaypoint* wp) {
@@ -72,3 +72,93 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 
 	return nextDestination;
 }
+
+// VEC FUNCTIONS
+
+// void Ped::Tagent::computeNextDesiredPositionVec(float *xdes, float *ydes, float *x, float *y) {
+// 	destination = getNextDestinationVec(xdes, ydes, x, y);
+// 	if (destination == NULL) {
+// 		// no destination, no need to
+// 		// compute where to move to
+// 		return;
+// 	}
+
+// 	__m128 X, Y, Xdes, Ydes, Xdiff, Ydiff, Xmul, Ymul, add, sqrt;	
+// 	X = _mm_load_ps(&xdes[i]);
+// 	Y = _mm_load_ps(&ydes[i]);
+// 	Xdes = _mm_load_ps(&x[i]); // load 4 elements of x in X
+// 	Ydes = _mm_load_ps(&y[i]);
+// 	// double diffX = destination->getx() - X;
+// 	// double diffY = destination->gety() - Y;
+// 	Xdiff = _mm_sub_ps(X, Xdes);
+// 	Ydiff = _mm_sub_ps(Y, Ydes);
+// 	// double len = iffX * diffX + diffY * diffY);
+// 	Xmul = _mm_mul_ps(Xdiff, Xdiff);
+// 	Ymul = _mm_mul_ps(Ydiff, Ydiff);
+// 	add = _mm_add_ps(Xmul, Ymul);
+// 	sqrt = _mm_sqrt_ps(add);
+// 	// desiredPositionY = (int)round(y + diffY / len);
+// 	// desiredPositionX = (int)round(x + diffX / len);
+// 	Xdes = _mm_add_ps(X, Xdiff);
+// 	Ydes = _mm_add_ps(Y, Ydiff);
+// 	X = _mm_div_ps(Xdes, sqrt);
+// 	Y = _mm_div_ps(Ydes, sqrt);
+// 	Xdes = _mm_round_ps(X, 0);
+// 	Ydes = _mm_round_ps(Y, 0);
+// }
+
+// std::vector<Ped::Twaypoint*> Ped::Tagent::getNextDestinationVec(float *xdes, float *ydes, float *x, float *y) {
+// 	Ped::Twaypoint* nextDestination = NULL;
+// 	bool agentReachedDestination = false;
+// 	// float *dests = (float *) _mm_malloc(agents.size() * sizeof(float), 16);
+
+// 	if (destination != NULL) {
+// 		// compute if agent reached its current destination
+// 		// double diffX = destination->getx() - x;
+// 		// double diffY = destination->gety() - y;
+// 		// double length = sqrt(diffX * diffX + diffY * diffY);
+// 		__m128 X, Y, Xdes, Ydes, Xdiff, Ydiff, Xmul, Ymul, add, sqrt;	
+// 		X = _mm_load_ps(&xdes[i]);
+// 		Y = _mm_load_ps(&ydes[i]);
+// 		Xdes = _mm_load_ps(&x[i]); // load 4 elements of x in X
+// 		Ydes = _mm_load_ps(&y[i]);
+// 		// double diffX = destination->getx() - X;
+// 		// double diffY = destination->gety() - Y;
+// 		Xdiff = _mm_sub_ps(X, Xdes);
+// 		Ydiff = _mm_sub_ps(Y, Ydes);
+// 		// double len = iffX * diffX + diffY * diffY);
+// 		Xmul = _mm_mul_ps(Xdiff, Xdiff);
+// 		Ymul = _mm_mul_ps(Ydiff, Ydiff);
+// 		add = _mm_add_ps(Xmul, Ymul);
+// 		sqrt = _mm_sqrt_ps(add);
+// 		for( int i = 0; i < 4; i++){
+// 			agentReachedDestination = sqrt[i] < destination->getr();
+// 			if (agentReachedDestination && !waypoints.empty()) {
+// 				// Case 1: agent has reached destination (or has no current destination);
+// 				// get next destination if available
+// 				waypoints.push_back(destination);
+// 				nextDestination = waypoints.front();
+// 				waypoints.pop_front();
+// 			}
+
+// 			if ((agentReachedDestination || destination == NULL) && !waypoints.empty()) {
+// 				// Case 1: agent has reached destination (or has no current destination);
+// 				// get next destination if available
+// 				waypoints.push_back(destination);
+// 				nextDestination = waypoints.front();
+// 				waypoints.pop_front();
+// 			}
+
+// 			else {
+// 				// Case 2: agent has not yet reached destination, continue to move towards
+// 				// current destination
+// 				nextDestination = destination;
+// 			}
+	
+// 		}
+
+// 	}
+
+// 	return nextDestination;
+// }
+

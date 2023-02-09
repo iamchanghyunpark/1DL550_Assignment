@@ -37,6 +37,23 @@ namespace Ped{
 		// Returns the agents of this scenario
 		const std::vector<Tagent*> getAgents() const { return agents; };
 
+		// Returns the destinations of this scenario
+		const std::vector<Twaypoint*> getDest() const { return destinations; };
+
+
+
+		// Returns the the X vector of this scenario
+		float *getVecX() const { return x; };
+
+		// Returns the the Y vector of this scenario
+		float *getVecY() const { return y; };
+
+		// Returns the the X vector of this scenario
+		float *getVecXdes() const { return xdes; };
+
+		// Returns the the Y vector of this scenario
+		float *getVecYdes() const { return ydes; };
+
 		// Adds an agent to the tree structure
 		void placeAgent(const Ped::Tagent *a);
 
@@ -60,6 +77,13 @@ namespace Ped{
 
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
+
+		// Vector of x and y coordinates in this scenario
+		float *x;
+		float *y;
+		// Vector of x and y coordinates in this scenario
+		float *xdes;
+		float *ydes;
 
 		// Moves an agent towards its next position
 		void move(Ped::Tagent *agent);

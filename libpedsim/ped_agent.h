@@ -30,8 +30,8 @@ namespace Ped {
 		Tagent(double posX, double posY);
 
 		// Returns the coordinates of the desired position
-		int getDesiredX() const { return desiredPositionX; }
-		int getDesiredY() const { return desiredPositionY; }
+		float getDesiredX() const { return desiredPositionX; }
+		float getDesiredY() const { return desiredPositionY; }
 
 		// Sets the agent's position
 		void setX(int newX) { x = newX; }
@@ -42,22 +42,26 @@ namespace Ped {
 		void computeNextDesiredPosition();
 
 		// Position of agent defined by x and y
-		int getX() const { return x; };
-		int getY() const { return y; };
+		float getX() const { return x; };
+		float getY() const { return y; };
 
 		// Adds a new waypoint to reach for this agent
 		void addWaypoint(Twaypoint* wp);
+
+		deque<Twaypoint*> getWaypoints() const { return waypoints; };
+
+		Twaypoint* getDestination() const { return destination; };
 
 	private:
 		Tagent() {};
 
 		// The agent's current position
-		int x;
-		int y;
+		float x;
+		float y;
 
 		// The agent's desired next position
-		int desiredPositionX;
-		int desiredPositionY;
+		float desiredPositionX;
+		float desiredPositionY;
 
 		// The current destination (may require several steps to reach)
 		Twaypoint* destination;
