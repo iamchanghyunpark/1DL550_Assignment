@@ -12,18 +12,36 @@
 #include <stdlib.h>
 
 Ped::Tagent::Tagent(int posX, int posY) {
-	Ped::Tagent::init((float)posX, (float) posY);
+	Ped::Tagent::init(posX, posY);
 }
 
 Ped::Tagent::Tagent(double posX, double posY) {
-	Ped::Tagent::init((float)round(posX), (float)round(posY));
+	Ped::Tagent::init((int)round(posX), (int)round(posY));
 }
 
 void Ped::Tagent::init(int posX, int posY) {
-	x = (float) posX;
-	y = (float) posY;
+	x = posX;
+	y = posY;
 	destination = NULL;
 	lastDestination = NULL;
+}
+
+int Ped::Tagent::getAllX() { return (int) allX[id]; }
+int Ped::Tagent::getAllY() { return (int) allY[id]; }
+float Ped::Tagent::getDestX() { return destination->getx(); }
+float Ped::Tagent::getDestY() { return destination->gety(); }
+float Ped::Tagent::getDestR() { return destination->getr(); }
+
+
+void Ped::Tagent::destInit() { destination = waypoints.front(); }
+
+void Ped::Tagent::updateDest(){
+	waypoints.pop_front();
+	waypoints.push_back(destination);
+	destination = waypoints.front();
+	destX[id] = destination->getx();
+	destY[id] = destination->gety();
+	destR[id] = destination->getr();
 }
 
 void Ped::Tagent::computeNextDesiredPosition() {
@@ -33,12 +51,11 @@ void Ped::Tagent::computeNextDesiredPosition() {
 		// compute where to move to
 		return;
 	}
-
 	double diffX = destination->getx() - x;
 	double diffY = destination->gety() - y;
 	double len = sqrt(diffX * diffX + diffY * diffY);
-	desiredPositionX = (float) round(x + diffX / len);
-	desiredPositionY = (float) round(y + diffY / len);
+	desiredPositionX = (int) round(x + diffX / len);
+	desiredPositionY = (int) round(y + diffY / len);
 }
 
 void Ped::Tagent::addWaypoint(Twaypoint* wp) {
@@ -54,7 +71,7 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 		double diffX = destination->getx() - x;
 		double diffY = destination->gety() - y;
 		double length = sqrt(diffX * diffX + diffY * diffY);
-		agentReachedDestination = length < destination->getr();
+		agentReachedDestination = length < destination->getr();		
 	}
 
 	if ((agentReachedDestination || destination == NULL) && !waypoints.empty()) {

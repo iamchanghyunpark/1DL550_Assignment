@@ -29,39 +29,71 @@ namespace Ped {
 		Tagent(int posX, int posY);
 		Tagent(double posX, double posY);
 
-		// Returns the coordinates of the desired position
-		float getDesiredX() const { return desiredPositionX; }
-		float getDesiredY() const { return desiredPositionY; }
+		/* SETTERS */
+		void setallX(float *newallX) { allX = newallX; }
+		void setallY(float *newallY) { allY = newallY; }
+
+		void setdestX(float *newdX) { destX = newdX; };
+		void setdestY(float *newdY) { destY = newdY; };
+		void setdestR(float *newdR) { destR = newdR; };
+
+		void setId(int newid) { id = newid; };
 
 		// Sets the agent's position
 		void setX(int newX) { x = newX; }
 		void setY(int newY) { y = newY; }
 
-		// Update the position according to get closer
-		// to the current destination
-		void computeNextDesiredPosition();
 
+		/* GETTERS */
 		// Position of agent defined by x and y
 		float getX() const { return x; };
 		float getY() const { return y; };
 
+		float getDestX();
+		float getDestY();
+		float getDestR();
+
+		int* getXAddr() { return &x; };
+		int* getYAddr() { return &y; };
+		
+		 int getAllX(); //{ return (int) allX[id]; };
+		 int getAllY(); //{ return (int) allY[id]; };
+
+		// Returns the coordinates of the desired position
+		float getDesiredX() const { return desiredPositionX; };
+		float getDesiredY() const { return desiredPositionY; };
+
+        int waypointSize() {return waypoints.size();};
+
+		/* FUNCTIONS */
 		// Adds a new waypoint to reach for this agent
 		void addWaypoint(Twaypoint* wp);
 
-		deque<Twaypoint*> getWaypoints() const { return waypoints; };
+		// Update the position according to get closer
+		// to the current destination
+		void computeNextDesiredPosition();
 
-		Twaypoint* getDestination() const { return destination; };
+		void destInit();
+
+		void updateDest();
 
 	private:
 		Tagent() {};
 
 		// The agent's current position
-		float x;
-		float y;
+		int x;
+		int y;
+		int id;
+
+		float *allX;
+		float *allY;
+		float *destX;
+		float *destY;
+		float *destR;
 
 		// The agent's desired next position
-		float desiredPositionX;
-		float desiredPositionY;
+		int desiredPositionX;
+		int desiredPositionY;
 
 		// The current destination (may require several steps to reach)
 		Twaypoint* destination;
