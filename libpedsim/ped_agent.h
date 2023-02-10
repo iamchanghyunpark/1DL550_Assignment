@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <deque>
+#include <math.h>
 
 using namespace std;
 
@@ -40,9 +41,11 @@ namespace Ped {
 		void setId(int newid) { id = newid; };
 
 		// Sets the agent's position
-		void setX(int newX) { x = newX; }
-		void setY(int newY) { y = newY; }
+		void setX(int newX) { x = newX; };
+		void setY(int newY) { y = newY; };
 
+		void setX(float newX) { x = (int) round(newX); };
+		void setY(float newY) { y = (int) round(newY); };
 
 		/* GETTERS */
 		// Position of agent defined by x and y

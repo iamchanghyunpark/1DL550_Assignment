@@ -144,8 +144,8 @@ void Ped::Model::tick()
 			destXReg = _mm_load_ps(&destX[i]); 
 			destYReg = _mm_load_ps(&destY[i]);
 			// Get length
-			__m128 Xdiff = _mm_sub_ps(xReg, destXReg);
-			__m128 Ydiff = _mm_sub_ps(yReg, destYReg);
+			__m128 Xdiff = _mm_sub_ps(destXReg, xReg);
+			__m128 Ydiff = _mm_sub_ps(destYReg, yReg);
 			__m128 Xmul = _mm_mul_ps(Xdiff, Xdiff);
 			__m128 Ymul = _mm_mul_ps(Ydiff, Ydiff);
 			__m128 len = _mm_sqrt_ps(_mm_add_ps(Xmul, Ymul));
@@ -162,13 +162,13 @@ void Ped::Model::tick()
 			}
 
 			// ComputeNextDesiredPosition:
-			xReg = _mm_load_ps(&X[i]);
-			yReg = _mm_load_ps(&Y[i]);
+			// xReg = _mm_load_ps(&X[i]);
+			// yReg = _mm_load_ps(&Y[i]);
 			destXReg = _mm_load_ps(&destX[i]); 
 			destYReg = _mm_load_ps(&destY[i]);
 			// Get length
-			Xdiff = _mm_sub_ps(xReg, destXReg);
-			Ydiff = _mm_sub_ps(yReg, destYReg);
+			Xdiff = _mm_sub_ps(destXReg, xReg);
+			Ydiff = _mm_sub_ps(destYReg, yReg);
 			Xmul = _mm_mul_ps(Xdiff, Xdiff);
 			Ymul = _mm_mul_ps(Ydiff, Ydiff);
 			len = _mm_sqrt_ps(_mm_add_ps(Xmul, Ymul));
@@ -179,16 +179,18 @@ void Ped::Model::tick()
 			__m128 Xadd = _mm_add_ps(xReg, Xdiv);
 			__m128 Yadd = _mm_add_ps(yReg, Ydiv);
 			__m128 p5 = _mm_set1_ps(0.5);
-        	Xadd = _mm_add_ps(Xadd, p5);
-        	Yadd = _mm_add_ps(Yadd, p5);
+			Xadd = _mm_add_ps(Xadd, p5);
+			Yadd = _mm_add_ps(Yadd, p5);
 			destXReg = _mm_floor_ps(Xadd);
 			destYReg = _mm_floor_ps(Yadd);
+			//cout << destXReg << "\n";
 			_mm_store_ps(&X[i], destXReg);
-        	_mm_store_ps(&Y[i], destYReg);
-		}
-		for (int j = 0; j < agents.size(); j+=4){
-			agents.at(j)->setX(X[j]);
-			agents.at(j)->setY(Y[j]);
+			_mm_store_ps(&Y[i], destYReg);
+			for(int k = 0;k < 4; k++){
+				agents.at(i+k)->setX(X[k]);
+				agents.at(i+k)->setY(Y[k]);
+			
+			}
 		}
 		// x = getVecX();
 		// y = getVecY();
