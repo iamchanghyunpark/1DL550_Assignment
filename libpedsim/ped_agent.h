@@ -58,9 +58,6 @@ namespace Ped {
 
 		int* getXAddr() { return &x; };
 		int* getYAddr() { return &y; };
-		
-		 int getAllX(); //{ return (int) allX[id]; };
-		 int getAllY(); //{ return (int) allY[id]; };
 
 		// Returns the coordinates of the desired position
 		float getDesiredX() const { return desiredPositionX; };
