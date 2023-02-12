@@ -99,7 +99,7 @@ int main(int argc, char*argv[]) {
 
 			// Change this variable when testing different versions of your code. 
 			// May need modification or extension in later assignments depending on your implementations
-			Ped::IMPLEMENTATION implementation_to_test = Ped::OMP;
+			Ped::IMPLEMENTATION implementation_to_test = Ped::VECTOR;
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);

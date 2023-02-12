@@ -129,9 +129,10 @@ void Ped::Model::tick()
 			agent->setY(agent->getDesiredY());
 		}
 	}
-	//VECTOR IMPLEMENTATION
+	//VECTOR+OMP IMPLEMENTATION
 	if(this->implementation == VECTOR) {
 		int size = this->agents.size();
+		#pragma omp parallel for default(none) shared(size) num_threads(4)
 		for (int i = 0; i < size; i+=4) {
 			// Vectorized implementation of the
 			// computeNextPosition()-function
@@ -150,7 +151,7 @@ void Ped::Model::tick()
 			__m128 len = _mm_sqrt_ps(_mm_add_ps(Xmul, Ymul));
 			// Calculate if agents has reached destination
 			__m128 rReg = _mm_load_ps(&destR[i]);
-        	__m128 agentReach = _mm_cmplt_ps(len, rReg);
+			__m128 agentReach = _mm_cmplt_ps(len, rReg);
 			int mask = _mm_movemask_ps(agentReach);
 			// Update agents destination depending on if
 			// it has reached its previous destination
@@ -188,6 +189,7 @@ void Ped::Model::tick()
 		}
 		// Iterate through all agents and
 		// set their new positions
+		#pragma omp parallel for default(none) shared(size) num_threads(4)
 		for(int j = 0;j < size; j++) {
 			agents.at(j)->setX(X[j]);
 			agents.at(j)->setY(Y[j]);
@@ -195,7 +197,6 @@ void Ped::Model::tick()
 	}
 
 }
-
 
 ////////////
 /// Everything below here relevant for Assignment 3.
