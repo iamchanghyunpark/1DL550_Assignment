@@ -20,6 +20,8 @@ public:
 	// to repaint the window
 	void paint();
 
+	
+
 	static int cellToPixel(int val);
 	static const int cellsizePixel = 5;
 	~MainWindow();

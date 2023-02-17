@@ -38,5 +38,8 @@
 # QT files
 *.moc
 
+# core dumps
+core.*
+
 # binary file
 demo/demo

@@ -60,6 +60,28 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 		destR[i] = agents.at(i)->getDestR();
 	}
 
+	std:vector<int> region1, region2, region3, region4;
+
+	region1.push_back(0);
+	region1.push_back(400);
+	region1.push_back(0);
+	region1.push_back(300);
+
+	region2.push_back(400);
+	region2.push_back(800);
+	region2.push_back(300);
+	region2.push_back(600);
+
+	region3.push_back(0);
+	region3.push_back(400);
+	region3.push_back(300);
+	region3.push_back(600);
+
+	region4.push_back(400);
+	region4.push_back(800);
+	region4.push_back(0);
+	region4.push_back(300);
+
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
 }
@@ -125,8 +147,26 @@ void Ped::Model::tick()
 		#pragma omp parallel for default(none) shared(allAgents) num_threads(4)
 		for (Tagent *agent: allAgents) {
 			agent->computeNextDesiredPosition();
-			agent->setX(agent->getDesiredX());
-			agent->setY(agent->getDesiredY());
+			//agent->setX(agent->getDesiredX());
+			//agent->setY(agent->getDesiredY());
+			region = agent
+
+			#pragma omp single
+			if(region ) {
+				#pragma omp task 
+				move(agent);
+			}
+			
+			else if(
+				move(agent);
+			)
+			else if{
+				move(agent);
+			}
+			else {
+				move(agent);
+			}
+
 		}
 	}
 	//VECTOR+OMP IMPLEMENTATION
@@ -207,6 +247,7 @@ void Ped::Model::tick()
 // be moved to a location close to it.
 void Ped::Model::move(Ped::Tagent *agent)
 {
+
 	// Search for neighboring agents
 	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
 
@@ -218,7 +259,7 @@ void Ped::Model::move(Ped::Tagent *agent)
 	}
 
 	// Compute the three alternative positions that would bring the agent
-	// closer to his desiredPosition, starting with the desiredPosition itself
+	// closer to his desiredPosition, starting with the desiredPosition itself	
 	std::vector<std::pair<int, int> > prioritizedAlternatives;
 	std::pair<int, int> pDesired(agent->getDesiredX(), agent->getDesiredY());
 	prioritizedAlternatives.push_back(pDesired);

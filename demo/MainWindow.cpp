@@ -35,7 +35,8 @@ MainWindow::MainWindow(const Ped::Model &pedModel) : model(pedModel)
 		scene->addLine(0, y, 800, y, QPen(Qt::gray));
 	}
 
-	// Create viewAgents with references to the position of the model counterparts
+
+	// Create viewAgents with references to the position of the model counterparts	
 	const std::vector<Ped::Tagent*> &agents = model.getAgents();
 
 	std::vector<Ped::Tagent*>::const_iterator it;
