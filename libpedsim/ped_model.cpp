@@ -63,10 +63,10 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Initialize vectors representing the regions' x values
 
 	//region1.push_back(0);
-	region1 = 200;
-	region2 = 400;
-	region3 = 600;
-	region4 = 800;
+	region1 = 40;
+	region2 = 80;
+	region3 = 120;
+	region4 = 160;
 
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
@@ -130,35 +130,73 @@ void Ped::Model::tick()
 	}
 	//OPENMP IMPLEMENTATION
 	if(this->implementation == OMP) {
-		#pragma omp parallel for default(none) shared(allAgents) num_threads(4)
+		#pragma omp parallel for shared(allAgents) num_threads(4)
+		//#pragma omp parallel
+		//#pragma omp single
 		for (Tagent *agent: allAgents) {
 			agent->computeNextDesiredPosition();
 			//agent->setX(agent->getDesiredX());
 			//agent->setY(agent->getDesiredY());
+
 			int Xpos = agent->getX();
-			// move(agent);
-			
+			int XposNext = agent->getDesiredX();
+
 			if(Xpos <= region1 ) {
-				#pragma omp task
+				//std::cout << Xpos << "\n";
+				#pragma omp task 
 				move(agent);
-				#pragma omp taskawait 
+				#pragma omp taskwait
+				// if (Xpos == region1)
+				// {
+				// 	#pragma omp taskawait
+				// 	move(agent);
+				// }
+				// else {
+				// 	//#pragma omp taskawait 
+				// 	move(agent);
+				// }
 			}
 			else if(Xpos <= region2) {
-				#pragma omp task
+				#pragma omp task 
 				move(agent);
-				#pragma omp taskawait 
+				#pragma omp taskwait
+				// if (Xpos == region2 || Xpos == region1+1 )
+				// {
+				// 	#pragma omp taskawait
+				// 	move(agent);
+				// } else {
+				// 	//#pragma omp taskawait 
+				// 	move(agent);
+				// }		
 			}
 			else if(Xpos <= region3){
-				#pragma omp task
+				#pragma omp task 
 				move(agent);
-				#pragma omp taskawait 
-			}
+				#pragma omp taskwait
+				// if (Xpos == region3 || Xpos == region2+1)
+				// {
+				// 	#pragma omp taskawait
+				// 	move(agent);
+				// } else {
+				// 	//#pragma omp taskawait 
+				// 	move(agent);
+				// }
+			} 
 			else {
 				#pragma omp task
 				move(agent);
-				#pragma omp taskawait 
+				#pragma omp taskwait
+				// if (Xpos == region3+1)
+				// {
+				// 	#pragma omp taskawait
+				// 	move(agent);
+				// } else {
+				// 	//#pragma omp taskawait 
+				// 	move(agent);
+				// }
 			}
 		}
+		#pragma omp taskwait
 
 	}
 	//VECTOR+OMP IMPLEMENTATION
@@ -278,29 +316,6 @@ void Ped::Model::move(Ped::Tagent *agent)
 
 		// If the current position is not yet taken by any neighbor
 		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
-			// int Xpos = agent->getX();
-			// if((*it).first <= 200 ) {
-			// 	#pragma omp task 
-			// 	// Set the agent's position 
-			// 	agent->setX((*it).first);
-			// 	agent->setY((*it).second);
-			// }
-			// else if((*it).first <= 400) {
-			// 	#pragma omp task 
-			// 	agent->setX((*it).first);
-			// 	agent->setY((*it).second);
-			// }
-			// else if((*it).first <= 600){
-			// 	#pragma omp task 
-			// 	agent->setX((*it).first);
-			// 	agent->setY((*it).second);
-			// }
-			// else {
-			// 	#pragma omp task 
-			// 	agent->setX((*it).first);
-			// 	agent->setY((*it).second);
-			// }
-			// Set the agent's position 
 			agent->setX((*it).first);
 			agent->setY((*it).second);
 

@@ -77,6 +77,7 @@ void MainWindow::paint() {
 		}
 		else {
 			color = Qt::red;
+			cout << "krock" << "\n";
 		}
 
 		(*it)->paint(color);
