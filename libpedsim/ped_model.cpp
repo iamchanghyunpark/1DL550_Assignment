@@ -60,6 +60,14 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 		destR[i] = agents.at(i)->getDestR();
 	}
 
+	// Initialize vectors representing the regions' x values
+
+	//region1.push_back(0);
+	region1 = 200;
+	region2 = 400;
+	region3 = 600;
+	region4 = 800;
+
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
 }
@@ -125,13 +133,38 @@ void Ped::Model::tick()
 		#pragma omp parallel for default(none) shared(allAgents) num_threads(4)
 		for (Tagent *agent: allAgents) {
 			agent->computeNextDesiredPosition();
-			agent->setX(agent->getDesiredX());
-			agent->setY(agent->getDesiredY());
+			//agent->setX(agent->getDesiredX());
+			//agent->setY(agent->getDesiredY());
+			int Xpos = agent->getX();
+			// move(agent);
+			
+			if(Xpos <= region1 ) {
+				#pragma omp task
+				move(agent);
+				#pragma omp taskawait 
+			}
+			else if(Xpos <= region2) {
+				#pragma omp task
+				move(agent);
+				#pragma omp taskawait 
+			}
+			else if(Xpos <= region3){
+				#pragma omp task
+				move(agent);
+				#pragma omp taskawait 
+			}
+			else {
+				#pragma omp task
+				move(agent);
+				#pragma omp taskawait 
+			}
 		}
+
 	}
-	//VECTOR IMPLEMENTATION
+	//VECTOR+OMP IMPLEMENTATION
 	if(this->implementation == VECTOR) {
 		int size = this->agents.size();
+		#pragma omp parallel for default(none) shared(size) num_threads(4)
 		for (int i = 0; i < size; i+=4) {
 			// Vectorized implementation of the
 			// computeNextPosition()-function
@@ -150,9 +183,9 @@ void Ped::Model::tick()
 			__m128 len = _mm_sqrt_ps(_mm_add_ps(Xmul, Ymul));
 			// Calculate if agents has reached destination
 			__m128 rReg = _mm_load_ps(&destR[i]);
-        	__m128 agentReach = _mm_cmplt_ps(len, rReg);
+			__m128 agentReach = _mm_cmplt_ps(len, rReg);
 			int mask = _mm_movemask_ps(agentReach);
-			// Update agents destination depending on if
+			// Update agents destination depending on ifNow we can send off race and car to be 
 			// it has reached its previous destination
 			for (int j = 0; j < 4; j++) {
 				if (mask & 1) {
@@ -188,6 +221,7 @@ void Ped::Model::tick()
 		}
 		// Iterate through all agents and
 		// set their new positions
+		#pragma omp parallel for default(none) shared(size) num_threads(4)
 		for(int j = 0;j < size; j++) {
 			agents.at(j)->setX(X[j]);
 			agents.at(j)->setY(Y[j]);
@@ -195,7 +229,6 @@ void Ped::Model::tick()
 	}
 
 }
-
 
 ////////////
 /// Everything below here relevant for Assignment 3.
@@ -206,6 +239,7 @@ void Ped::Model::tick()
 // be moved to a location close to it.
 void Ped::Model::move(Ped::Tagent *agent)
 {
+
 	// Search for neighboring agents
 	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
 
@@ -217,7 +251,7 @@ void Ped::Model::move(Ped::Tagent *agent)
 	}
 
 	// Compute the three alternative positions that would bring the agent
-	// closer to his desiredPosition, starting with the desiredPosition itself
+	// closer to his desiredPosition, starting with the desiredPosition itself	
 	std::vector<std::pair<int, int> > prioritizedAlternatives;
 	std::pair<int, int> pDesired(agent->getDesiredX(), agent->getDesiredY());
 	prioritizedAlternatives.push_back(pDesired);
@@ -244,7 +278,28 @@ void Ped::Model::move(Ped::Tagent *agent)
 
 		// If the current position is not yet taken by any neighbor
 		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
-
+			// int Xpos = agent->getX();
+			// if((*it).first <= 200 ) {
+			// 	#pragma omp task 
+			// 	// Set the agent's position 
+			// 	agent->setX((*it).first);
+			// 	agent->setY((*it).second);
+			// }
+			// else if((*it).first <= 400) {
+			// 	#pragma omp task 
+			// 	agent->setX((*it).first);
+			// 	agent->setY((*it).second);
+			// }
+			// else if((*it).first <= 600){
+			// 	#pragma omp task 
+			// 	agent->setX((*it).first);
+			// 	agent->setY((*it).second);
+			// }
+			// else {
+			// 	#pragma omp task 
+			// 	agent->setX((*it).first);
+			// 	agent->setY((*it).second);
+			// }
 			// Set the agent's position 
 			agent->setX((*it).first);
 			agent->setY((*it).second);
