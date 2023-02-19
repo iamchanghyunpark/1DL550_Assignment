@@ -78,7 +78,7 @@ namespace Ped{
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
 
-		std:vector<int> region1, region2, region3, region4;
+		int region1, region2, region3, region4;
 
 		// Vector of x and y coordinates in this scenario
 		float *X;

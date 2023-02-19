@@ -60,27 +60,13 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 		destR[i] = agents.at(i)->getDestR();
 	}
 
-	std:vector<int> region1, region2, region3, region4;
+	// Initialize vectors representing the regions' x values
 
-	region1.push_back(0);
-	region1.push_back(400);
-	region1.push_back(0);
-	region1.push_back(300);
-
-	region2.push_back(400);
-	region2.push_back(800);
-	region2.push_back(300);
-	region2.push_back(600);
-
-	region3.push_back(0);
-	region3.push_back(400);
-	region3.push_back(300);
-	region3.push_back(600);
-
-	region4.push_back(400);
-	region4.push_back(800);
-	region4.push_back(0);
-	region4.push_back(300);
+	//region1.push_back(0);
+	region1 = 200;
+	region2 = 400;
+	region3 = 600;
+	region4 = 800;
 
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
@@ -149,25 +135,31 @@ void Ped::Model::tick()
 			agent->computeNextDesiredPosition();
 			//agent->setX(agent->getDesiredX());
 			//agent->setY(agent->getDesiredY());
-			region = agent
-
-			#pragma omp single
-			if(region ) {
-				#pragma omp task 
-				move(agent);
-			}
+			int Xpos = agent->getX();
+			// move(agent);
 			
-			else if(
+			if(Xpos <= region1 ) {
+				#pragma omp task
 				move(agent);
-			)
-			else if{
+				#pragma omp taskawait 
+			}
+			else if(Xpos <= region2) {
+				#pragma omp task
 				move(agent);
+				#pragma omp taskawait 
+			}
+			else if(Xpos <= region3){
+				#pragma omp task
+				move(agent);
+				#pragma omp taskawait 
 			}
 			else {
+				#pragma omp task
 				move(agent);
+				#pragma omp taskawait 
 			}
-
 		}
+
 	}
 	//VECTOR+OMP IMPLEMENTATION
 	if(this->implementation == VECTOR) {
@@ -193,7 +185,7 @@ void Ped::Model::tick()
 			__m128 rReg = _mm_load_ps(&destR[i]);
 			__m128 agentReach = _mm_cmplt_ps(len, rReg);
 			int mask = _mm_movemask_ps(agentReach);
-			// Update agents destination depending on if
+			// Update agents destination depending on ifNow we can send off race and car to be 
 			// it has reached its previous destination
 			for (int j = 0; j < 4; j++) {
 				if (mask & 1) {
@@ -286,7 +278,28 @@ void Ped::Model::move(Ped::Tagent *agent)
 
 		// If the current position is not yet taken by any neighbor
 		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
-
+			// int Xpos = agent->getX();
+			// if((*it).first <= 200 ) {
+			// 	#pragma omp task 
+			// 	// Set the agent's position 
+			// 	agent->setX((*it).first);
+			// 	agent->setY((*it).second);
+			// }
+			// else if((*it).first <= 400) {
+			// 	#pragma omp task 
+			// 	agent->setX((*it).first);
+			// 	agent->setY((*it).second);
+			// }
+			// else if((*it).first <= 600){
+			// 	#pragma omp task 
+			// 	agent->setX((*it).first);
+			// 	agent->setY((*it).second);
+			// }
+			// else {
+			// 	#pragma omp task 
+			// 	agent->setX((*it).first);
+			// 	agent->setY((*it).second);
+			// }
 			// Set the agent's position 
 			agent->setX((*it).first);
 			agent->setY((*it).second);
