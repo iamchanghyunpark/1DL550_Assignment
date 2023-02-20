@@ -88,8 +88,14 @@ namespace Ped{
 		float *destY;
 		float *destR;
 
+		std::set<Ped::Tagent*> region1list;
+		std::set<Ped::Tagent*> region2list;
+		std::set<Ped::Tagent*> region3list;
+		std::set<Ped::Tagent*> region4list;
+
 		// Moves an agent towards its next position
 		void move(Ped::Tagent *agent);
+		void movecrit(Ped::Tagent *agent);
 
 		////////////
 		/// Everything below here won't be relevant until Assignment 3

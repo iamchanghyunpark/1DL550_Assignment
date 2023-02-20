@@ -68,6 +68,20 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	region3 = 120;
 	region4 = 160;
 
+	//for (Tagent *agent: agents) {
+	//	int X = agent->getX();
+	//	if(X<= region1) {
+	//		region1list.insert(agent);
+	//	}else if(X <= region2) {
+	//		region2list.insert(agent);
+	//	}else if(X <= region3) {
+	//		region3list.insert(agent);
+	//	}else {
+	//		region4list.insert(agent);
+	//	}
+	//}
+
+
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
 }
@@ -130,73 +144,37 @@ void Ped::Model::tick()
 	}
 	//OPENMP IMPLEMENTATION
 	if(this->implementation == OMP) {
-		#pragma omp parallel for shared(allAgents) num_threads(4)
-		//#pragma omp parallel
-		//#pragma omp single
+		#pragma omp parallel shared(allAgents) num_threads(4) //for
+		#pragma omp single 
+		{
 		for (Tagent *agent: allAgents) {
-			agent->computeNextDesiredPosition();
 			//agent->setX(agent->getDesiredX());
 			//agent->setY(agent->getDesiredY());
 
 			int Xpos = agent->getX();
 			int XposNext = agent->getDesiredX();
 
-			if(Xpos <= region1 ) {
-				//std::cout << Xpos << "\n";
-				#pragma omp task 
-				move(agent);
-				#pragma omp taskwait
-				// if (Xpos == region1)
-				// {
-				// 	#pragma omp taskawait
-				// 	move(agent);
-				// }
-				// else {
-				// 	//#pragma omp taskawait 
-				// 	move(agent);
-				// }
-			}
-			else if(Xpos <= region2) {
-				#pragma omp task 
-				move(agent);
-				#pragma omp taskwait
-				// if (Xpos == region2 || Xpos == region1+1 )
-				// {
-				// 	#pragma omp taskawait
-				// 	move(agent);
-				// } else {
-				// 	//#pragma omp taskawait 
-				// 	move(agent);
-				// }		
-			}
-			else if(Xpos <= region3){
-				#pragma omp task 
-				move(agent);
-				#pragma omp taskwait
-				// if (Xpos == region3 || Xpos == region2+1)
-				// {
-				// 	#pragma omp taskawait
-				// 	move(agent);
-				// } else {
-				// 	//#pragma omp taskawait 
-				// 	move(agent);
-				// }
-			} 
-			else {
+			if(Xpos < region1) {
 				#pragma omp task
-				move(agent);
-				#pragma omp taskwait
-				// if (Xpos == region3+1)
-				// {
-				// 	#pragma omp taskawait
-				// 	move(agent);
-				// } else {
-				// 	//#pragma omp taskawait 
-				// 	move(agent);
-				// }
+				agent->computeNextDesiredPosition();
+				movecrit(agent);
+
+			} else if(Xpos < region2) {
+				#pragma omp task
+				agent->computeNextDesiredPosition();
+				movecrit(agent);
+		
+			} else if(Xpos < region3){
+				#pragma omp task
+				agent->computeNextDesiredPosition();
+				movecrit(agent);
+			} else {
+				#pragma omp task
+				agent->computeNextDesiredPosition();
+				movecrit(agent);
 			}
 		}
-		#pragma omp taskwait
+		}
 
 	}
 	//VECTOR+OMP IMPLEMENTATION
@@ -205,7 +183,7 @@ void Ped::Model::tick()
 		#pragma omp parallel for default(none) shared(size) num_threads(4)
 		for (int i = 0; i < size; i+=4) {
 			// Vectorized implementation of the
-			// computeNextPosition()-function
+			// computeNextPosition()-function		
 			__m128 xReg, yReg, destXReg, destYReg;
 			// Load elements
 			xReg = _mm_load_ps(&X[i]);
@@ -346,4 +324,78 @@ Ped::Model::~Model()
 {
 	std::for_each(agents.begin(), agents.end(), [](Ped::Tagent *agent){delete agent;});
 	std::for_each(destinations.begin(), destinations.end(), [](Ped::Twaypoint *destination){delete destination; });
+}
+
+
+
+void Ped::Model::movecrit(Ped::Tagent *agent) 
+{
+	
+	// Search for neighboring agents
+	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
+
+	// Retrieve their positions
+	std::vector<std::pair<int, int> > takenPositions;
+	for (std::set<const Ped::Tagent*>::iterator neighborIt = neighbors.begin(); neighborIt != neighbors.end(); ++neighborIt) {
+		std::pair<int, int> position((*neighborIt)->getX(), (*neighborIt)->getY());
+		takenPositions.push_back(position);
+	}
+
+	// Compute the three alternative positions that would bring the agent
+	// closer to his desiredPosition, starting with the desiredPosition itself	
+	std::vector<std::pair<int, int> > prioritizedAlternatives;
+	std::pair<int, int> pDesired(agent->getDesiredX(), agent->getDesiredY());
+	prioritizedAlternatives.push_back(pDesired);
+
+	int diffX = pDesired.first - agent->getX();
+	int diffY = pDesired.second - agent->getY();
+	std::pair<int, int> p1, p2;
+	if (diffX == 0 || diffY == 0)
+	{
+		// Agent wants to walk straight to North, South, West or East
+		p1 = std::make_pair(pDesired.first + diffY, pDesired.second + diffX);
+		p2 = std::make_pair(pDesired.first - diffY, pDesired.second - diffX);
+	}
+	else {
+		// Agent wants to walk diagonally
+		p1 = std::make_pair(pDesired.first, agent->getY());
+		p2 = std::make_pair(agent->getX(), pDesired.second);
+	}
+	prioritizedAlternatives.push_back(p1);
+	prioritizedAlternatives.push_back(p2);
+
+	// Find the first empty alternative position
+	for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
+
+		// If the current position is not yet taken by any neighbor
+		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
+
+			if(agent->getX() < region1 && (*it).first > region1-1 || agent->getX() > region1-1 && agent->getX() < region2 && (*it).first < region1) {
+				#pragma omp critical 
+				{
+				agent->setX((*it).first);
+				agent->setY((*it).second);
+
+				}
+			} else if(agent->getX() < region2 && agent->getX() > region1 && (*it).first > region2-1 || agent->getX() > region2-1 && agent->getX() < region3 && (*it).first < region2) {
+				#pragma omp critical 
+				{
+				agent->setX((*it).first);
+				agent->setY((*it).second);
+
+				}
+			} else if(agent->getX() < region3 && agent->getX() > region2 && (*it).first > region3-1 || agent->getX() > region3-1 && (*it).first < region3) {
+				#pragma omp critical 
+				{
+				agent->setX((*it).first);
+				agent->setY((*it).second);
+				}
+			} else {	
+				agent->setX((*it).first);
+				agent->setY((*it).second);
+			}
+
+			break;
+		}
+	}
 }
