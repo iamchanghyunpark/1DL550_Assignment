@@ -144,38 +144,6 @@ void Ped::Model::tick()
 	}
 	//OPENMP IMPLEMENTATION
 	if(this->implementation == OMP) {
-		#pragma omp parallel shared(allAgents) num_threads(4) //for
-		#pragma omp single 
-		{
-		for (Tagent *agent: allAgents) {
-			//agent->setX(agent->getDesiredX());
-			//agent->setY(agent->getDesiredY());
-
-			int Xpos = agent->getX();
-			int XposNext = agent->getDesiredX();
-
-			if(Xpos < region1) {
-				#pragma omp task
-				agent->computeNextDesiredPosition();
-				movecrit(agent);
-
-			} else if(Xpos < region2) {
-				#pragma omp task
-				agent->computeNextDesiredPosition();
-				movecrit(agent);
-		
-			} else if(Xpos < region3){
-				#pragma omp task
-				agent->computeNextDesiredPosition();
-				movecrit(agent);
-			} else {
-				#pragma omp task
-				agent->computeNextDesiredPosition();
-				movecrit(agent);
-			}
-		}
-		}
-
 	}
 	//VECTOR+OMP IMPLEMENTATION
 	if(this->implementation == VECTOR) {
@@ -242,6 +210,40 @@ void Ped::Model::tick()
 			agents.at(j)->setX(X[j]);
 			agents.at(j)->setY(Y[j]);
 		}
+	}
+	if(this->implementation == TASK) {
+		#pragma omp parallel shared(allAgents) num_threads(4) //for
+		#pragma omp single 
+		{
+		for (Tagent *agent: allAgents) {
+			//agent->setX(agent->getDesiredX());
+			//agent->setY(agent->getDesiredY());
+
+			int Xpos = agent->getX();
+			int XposNext = agent->getDesiredX();
+
+			if(Xpos < region1) {
+				#pragma omp task
+				agent->computeNextDesiredPosition();
+				movecrit(agent);
+
+			} else if(Xpos < region2) {
+				#pragma omp task
+				agent->computeNextDesiredPosition();
+				movecrit(agent);
+		
+			} else if(Xpos < region3){
+				#pragma omp task
+				agent->computeNextDesiredPosition();
+				movecrit(agent);
+			} else {
+				#pragma omp task
+				agent->computeNextDesiredPosition();
+				movecrit(agent);
+			}
+		}
+		}
+
 	}
 
 }
