@@ -144,6 +144,12 @@ void Ped::Model::tick()
 	}
 	//OPENMP IMPLEMENTATION
 	if(this->implementation == OMP) {
+		#pragma omp parallel for default(none) shared(allAgents) num_threads(4)
+		for (Tagent *agent: allAgents) {
+			agent->computeNextDesiredPosition();
+			agent->setX(agent->getDesiredX());
+			agent->setY(agent->getDesiredY());
+		}
 	}
 	//VECTOR+OMP IMPLEMENTATION
 	if(this->implementation == VECTOR) {
@@ -216,36 +222,39 @@ void Ped::Model::tick()
 		#pragma omp single 
 		{
 		for (Tagent *agent: allAgents) {
-			//agent->setX(agent->getDesiredX());
-			//agent->setY(agent->getDesiredY());
-
-			int Xpos = agent->getX();
-			int XposNext = agent->getDesiredX();
-
+		int Xpos = agent-> getX();
 			if(Xpos < region1) {
 				#pragma omp task
 				agent->computeNextDesiredPosition();
-				movecrit(agent);
+				move(agent);
 
 			} else if(Xpos < region2) {
 				#pragma omp task
 				agent->computeNextDesiredPosition();
-				movecrit(agent);
+				move(agent);
 		
 			} else if(Xpos < region3){
 				#pragma omp task
 				agent->computeNextDesiredPosition();
-				movecrit(agent);
+				move(agent);
 			} else {
 				#pragma omp task
 				agent->computeNextDesiredPosition();
-				movecrit(agent);
+				move(agent);
 			}
 		}
 		}
 
 	}
 
+	if(this->implementation == MOVESEQ) {
+		for (Tagent *agent: allAgents) {
+			int Xpos = agent-> getX();
+			agent->computeNextDesiredPosition();
+			move(agent);
+		}
+
+	}
 }
 
 ////////////
@@ -255,9 +264,11 @@ void Ped::Model::tick()
 
 // Moves the agent to the next desired position. If already taken, it will
 // be moved to a location close to it.
-void Ped::Model::move(Ped::Tagent *agent)
-{
 
+
+void Ped::Model::move(Ped::Tagent *agent) 
+{
+	
 	// Search for neighboring agents
 	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
 
@@ -296,8 +307,31 @@ void Ped::Model::move(Ped::Tagent *agent)
 
 		// If the current position is not yet taken by any neighbor
 		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
-			agent->setX((*it).first);
-			agent->setY((*it).second);
+
+			if(agent->getX() < region1 && (*it).first > region1-1 || agent->getX() > region1-1 && agent->getX() < region2 && (*it).first < region1) {
+				#pragma omp critical 
+				{
+				agent->setX((*it).first);
+				agent->setY((*it).second);
+
+				}
+			} else if(agent->getX() < region2 && agent->getX() > region1 && (*it).first > region2-1 || agent->getX() > region2-1 && agent->getX() < region3 && (*it).first < region2) {
+				#pragma omp critical 
+				{
+				agent->setX((*it).first);
+				agent->setY((*it).second);
+
+				}
+			} else if(agent->getX() < region3 && agent->getX() > region2 && (*it).first > region3-1 || agent->getX() > region3-1 && (*it).first < region3) {
+				#pragma omp critical 
+				{
+				agent->setX((*it).first);
+				agent->setY((*it).second);
+				}
+			} else {	
+				agent->setX((*it).first);
+				agent->setY((*it).second);
+			}
 
 			break;
 		}
