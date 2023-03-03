@@ -19,10 +19,19 @@ void Ped::Model::setupHeatmapSeq()
 	int *shm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
 	int *bhm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
 
+	cudaMalloc(hm, SIZE*SIZE*sizeof(int))
+	cudaMalloc(shm, SCALED_SIZE*SCALED_SIZE*sizeof(int))
+	cudaMalloc(bhm, SCALED_SIZE*SCALED_SIZE*sizeof(int))
+
 	heatmap = (int**)malloc(SIZE*sizeof(int*));
+
+	cudaMalloc(heatmap, SIZE*sizeof(int*))
 
 	scaled_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
 	blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
+
+	cudaMalloc(scaled_heatmap, SCALED_SIZE*sizeof(int*))
+	cudaMalloc(blurred_heatmap, SCALED_SIZE*sizeof(int*))
 
 	for (int i = 0; i < SIZE; i++)
 	{

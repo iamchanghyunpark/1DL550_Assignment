@@ -222,7 +222,7 @@ void Ped::Model::tick()
 		#pragma omp single 
 		{
 		for (Tagent *agent: allAgents) {
-		int Xpos = agent-> getX();
+			int Xpos = agent-> getX();
 			if(Xpos < region1) {
 				#pragma omp task
 				agent->computeNextDesiredPosition();
@@ -243,6 +243,7 @@ void Ped::Model::tick()
 				move(agent);
 			}
 		}
+		updateHeatmapSeq();
 		}
 
 	}
