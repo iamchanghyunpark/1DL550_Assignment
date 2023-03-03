@@ -12,26 +12,23 @@ using namespace std;
 // Memory leak check with msvc++
 #include <stdlib.h>
 
+// Cuda
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
 // Sets up the heatmap
+/*
 void Ped::Model::setupHeatmapSeq()
 {
 	int *hm = (int*)calloc(SIZE*SIZE, sizeof(int));
 	int *shm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
 	int *bhm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
 
-	cudaMalloc(hm, SIZE*SIZE*sizeof(int))
-	cudaMalloc(shm, SCALED_SIZE*SCALED_SIZE*sizeof(int))
-	cudaMalloc(bhm, SCALED_SIZE*SCALED_SIZE*sizeof(int))
-
 	heatmap = (int**)malloc(SIZE*sizeof(int*));
-
-	cudaMalloc(heatmap, SIZE*sizeof(int*))
 
 	scaled_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
 	blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
 
-	cudaMalloc(scaled_heatmap, SCALED_SIZE*sizeof(int*))
-	cudaMalloc(blurred_heatmap, SCALED_SIZE*sizeof(int*))
 
 	for (int i = 0; i < SIZE; i++)
 	{
@@ -125,42 +122,100 @@ void Ped::Model::updateHeatmapSeq()
 		}
 	}
 }
+*/
 
-
-
-void Ped::Model::setupHeatmap()
+void Ped::Model::setupHeatmapSeq()
 {
-	int *hm;
-	int *shm;
-	int *bhm;
-	int **heatmap;
-	int **scaled_heatmap;
-	int **blurred_heatmap;
+	int *hm = (int*)calloc(SIZE*SIZE, sizeof(int));
+	int *shm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
+	int *bhm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
 
-	cudaMalloc(hm, SIZE*SIZE*sizeof(int))
-	cudaMalloc(shm, SCALED_SIZE*SCALED_SIZE*sizeof(int))
-	cudaMalloc(bhm, SCALED_SIZE*SCALED_SIZE*sizeof(int))
+	cudaMalloc((void **) &d_hm, SIZE*SIZE*sizeof(int));
+	cudaMalloc((void **) &d_shm, SCALED_SIZE*SCALED_SIZE*sizeof(int));
+	cudaMalloc((void **) &d_bhm, SCALED_SIZE*SCALED_SIZE*sizeof(int));
 
-	cudaMalloc(heatmap, SIZE*sizeof(int*))
+	cudaMemcpy(d_hm, hm, SIZE*SIZE*sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_shm, shm, SCALED_SIZE*SCALED_SIZE*sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_bhm, bhm, SCALED_SIZE*SCALED_SIZE*sizeof(int), cudaMemcpyHostToDevice);
 
-	cudaMalloc(scaled_heatmap, SCALED_SIZE*sizeof(int*))
-	cudaMalloc(blurred_heatmap, SCALED_SIZE*sizeof(int*))
+	heatmap = (int**)malloc(SIZE*sizeof(int*));
 
+	cudaMalloc((void ***)&d_heatmap, SIZE*sizeof(int*));
+	cudaMemcpy(d_heatmap, heatmap, SIZE*sizeof(int*), cudaMemcpyHostToDevice);
 
+	scaled_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
+	blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
 
-	for (int i = 0; i < SIZE; i++)
-	{
-		heatmap[i] = hm + SIZE*i;
+	cudaMalloc((void ***)&d_scaled_heatmap, SCALED_SIZE*sizeof(int*));
+	cudaMalloc((void ***)&d_blurred_heatmap, SCALED_SIZE*sizeof(int*));
+	cudaMemcpy(d_scaled_heatmap, scaled_heatmap, SCALED_SIZE*sizeof(int*), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_blurred_heatmap, blurred_heatmap, SCALED_SIZE*sizeof(int*), cudaMemcpyHostToDevice);
+
+	kernel_setupHeatmap<<<1,256>>>(hm, heatmap, SIZE);
+	kernel_setupScaledHeatmap<<<1,256>>>(shm, scaled_heatmap, SCALED_SIZE);
+	kernel_setupBlurredHeatmap<<<2,256>>>(bhm, blurred_heatmap, SCALED_SIZE);
+
+	// Copy back to host
+	cudaMemcpy(d_hm, hm, SIZE*SIZE*sizeof(int), cudaMemcpyDeviceToHost);
+	cudaMemcpy(d_shm, shm, SCALED_SIZE*SCALED_SIZE*sizeof(int), cudaMemcpyDeviceToHost);
+	cudaMemcpy(d_bhm, bhm, SCALED_SIZE*SCALED_SIZE*sizeof(int), cudaMemcpyDeviceToHost);
+	cudaMemcpy(d_heatmap, heatmap, SIZE*sizeof(int*), cudaMemcpyDeviceToHost);
+	cudaMemcpy(d_scaled_heatmap, scaled_heatmap, SCALED_SIZE*sizeof(int*), cudaMemcpyDeviceToHost);
+	cudaMemcpy(d_blurred_heatmap, blurred_heatmap, SCALED_SIZE*sizeof(int*), cudaMemcpyDeviceToHost);
+
+	// cudaFree(d_hm);
+	// cudaFree(d_shm);
+	// cudaFree(d_bhm);
+	
+	// cudaFree(d_geatmap);
+	// cudaFree(d_scaled_heatmap);
+	// cudaFree(d_blurred_heatmap);
+	
+    // free(hm);
+    // free(shm);
+    // free(bhm);
+
+	// free(heatmap);
+	// free(scaled_heatmap);
+	// free(blurred_heatmap);
+}
+
+__global__ void Ped::Model::kernel_setupHeatmap(int *hm, int **heatmap, int SIZE) {
+	
+	int id = blockIdx.x * blockDim.x + threadIdx.x
+	
+	if (id < SIZE) {
+		mul = SIZE*id
+		atomicAdd(&heatmap[id], hm);
+		atomicAdd(&heatmap[id], mul);
 	}
-	for (int i = 0; i < SCALED_SIZE; i++)
-	{
-		scaled_heatmap[i] = shm + SCALED_SIZE*i;
-		blurred_heatmap[i] = bhm + SCALED_SIZE*i;
+
+}
+__global__ void Ped::Model::kernel_setupScaledHeatmap(int *shm, int **scaled_heatmap, int SCALED_SIZE) {
+
+	int id = blockIdx.x * blockDim.x + threadIdx.x
+
+	if (id < SCALED_SIZE) {
+		//MIGHT CAUSE DATARACE
+		mul = SCALED_SIZE*id
+		atomicAdd(&scaled_heatmap[id], shm);
+		atomicAdd(&scaled_heatmap[id], mul);
+	}
+}
+
+__global__ void Ped::Model::kernel_setupBlurredHeatmap(int *bhm, int **blurred_heatmap, int SCALED_SIZE) {
+
+	int id = blockIdx.x * blockDim.x + threadIdx.x
+
+	if (id < SCALED_SIZE) {
+		mul = SCALED_SIZE*id
+		atomicAdd(&blurred_heatmap[id], bhm);
+		atomicAdd(&blurred_heatmap[id], mul);
 	}
 }
 
 // Updates the heatmap according to the agent positions
-void Ped::Model::updateHeatmap()
+void Ped::Model::updateHeatmapSeq()
 {
 	for (int x = 0; x < SIZE; x++)
 	{
