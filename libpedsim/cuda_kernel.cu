@@ -1,113 +1,189 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include "heatmap_seq.h"
 
-#include <stdio.h>
+#include "ped_model.h"
 
-void kernel_addWithCuda(int *hm, int **heatmap, int size);
+#include <cstdlib>
+#include <iostream>
+#include <cmath>
+using namespace std;
 
-__global__ void kernel_add(int *d_hm, int **d_heatmap, int size)
+// Memory leak check with msvc++
+#include <stdlib.h>
+
+/* ---------------------------
+	SET HEATMAP FUNCTIONS
+-----------------------------*/
+
+void Ped::Model::setupHeatmapCuda()
 {
-	int id = blockIdx.x * blockDim.x + threadIdx.x;
-	
-	if (id < size) {
-		// mul = SIZE*id
-		// atomicAdd(&heatmap[id], hm);
-		// atomicAdd(&heatmap[id], mul);
-		d_heatmap[id] = d_hm + size*id;
+	cout << "malloc";
+	// Allocate memory on CPU
+	int *hm = (int*)calloc(SIZE*SIZE, sizeof(int));
+	int *shm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
+	int *bhm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
 
-	}
-}
+	heatmap = (int**)malloc(SIZE*sizeof(int*));
+	scaled_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
+	blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
 
-void kernel_setupHeatmap(int *hm, int *shm, int *bhm);
-	kernel_addWithCuda(hm, heatmap, SIZE);
-	kernel_addWithCuda(shm, scaled_heatmap, SCALED_SIZE);
-	kernel_addWithCuda(bhm, blurred_heatmap, SCALED_SIZE);
-
-// Helper function for using CUDA to add vectors in parallel.
-void kernel_addWithCuda(int *hm, int **heatmap, int size)
-{
-	int *d_hm;
-	int *d_heatmap;
-	cudaError_t cudaStatus;
-
-	cudaStatus = cudaSetDevice(0);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-		fprintf(stderr, "%s.\n", cudaGetErrorString(cudaGetLastError()));
-		goto Error;
-	}
-
-	// Allocate GPU buffers for three vector
-	cudaStatus = cudaMalloc((void **) &d_hm, size*size*sizeof(int));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		goto Error;
-	}
-
-	cudaStatus = cudaMalloc((void **) &d_heatmap, size*size*sizeof(int));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		goto Error;
-	}
-
-	// Copy input vector from host memory to GPU buffers.
-	cudaStatus = cudaMemcpy(d_hm, hm, size*size*sizeof(int), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		goto Error;
-	}
-
-	cudaStatus = cudaMemcpy(d_heatmap, heatmap, size*size*sizeof(int), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		goto Error;
-	}
-
-	// Launch a kernel on the GPU with one thread for each element.
-	kernel_add<<<1,size>>>(d_hm, d_heatmap, size);
-
-	// Check for any errors launching the kernel
-	cudaStatus = cudaGetLastError();
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-		goto Error;
-	}
-	else
+	// Initialize values, point to right memory
+	for (int i = 0; i < SIZE; i++)
 	{
-		//fprintf(stderr, "Cuda launch succeeded! \n");
+		heatmap[i] = hm + SIZE*i;
 	}
+	for (int i = 0; i < SCALED_SIZE; i++)
+	{
+		scaled_heatmap[i] = shm + SCALED_SIZE*i;
+		blurred_heatmap[i] = bhm + SCALED_SIZE*i;
+	}
+	
+	// Allocate memory on GPU
+	cudaMalloc((void **)&d_heatmap, SIZE*sizeof(int*));
+	cudaMalloc((void **)&d_scaled_heatmap, SCALED_SIZE*sizeof(int*));
+	cudaMalloc((void **)&d_blurred_heatmap, SCALED_SIZE*sizeof(int*));
 
-	// cudaDeviceSynchronize waits for the kernel to finish, and returns
-	// any errors encountered during the launch.
-	cudaStatus = cudaDeviceSynchronize();
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-		goto Error;
-	}
-
-	// Copy output vector from GPU buffer to host memory.
-	cudaStatus = cudaMemcpy(d_hm, hm, size*size*sizeof(int), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		goto Error;
-	}
-
-	cudaStatus = cudaMemcpy(d_heatmap, heatmap, size*size*sizeof(int), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		goto Error;
-	}
-
-Error:
-	cudaFree(d_hm);
-	cudaFree(d_heatmap);
-	if (cudaStatus != 0){
-		fprintf(stderr, "Cuda does not seem to be working properly.\n"); // This is not a good thing
-	}
-	else{
-		fprintf(stderr, "Cuda functionality test succeeded.\n"); // This is a good thing
-	}
-
-	return cudaStatus;
+	// Copy memory from host to device
+	cudaMemcpy(d_heatmap, heatmap, SIZE*sizeof(int*), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_scaled_heatmap, scaled_heatmap, SCALED_SIZE*sizeof(int*), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_blurred_heatmap, blurred_heatmap, SCALED_SIZE*sizeof(int*), cudaMemcpyHostToDevice);
 }
+
+/* ---------------------------
+	UPPDATE HEATMAP FUNCTIONS
+  --------------------------*/ 
+
+__global__ void kernel_fade(int **dev_heatmap)
+{
+	int x = blockIdx.x * blockDim.x + threadIdx.x;	
+	int y = blockIdx.y * blockDim.y + threadIdx.y;	
+	if (x < SIZE && y < SIZE)
+	{
+		dev_heatmap[y][x] = (int)round(dev_heatmap[y][x] * 0.80);
+	}
+}
+
+// __global__ void kernel_agents(int **dev_heatmap, Ped::Tagent *d_agents, int size_agents)
+// {
+// 	int i = blockIdx.x * blockDim.x + threadIdx.x;
+// 	if(i < size_agents){
+// 		int x = d_agents[i].getDesiredX();
+// 		int y = d_agents[i].getDesiredY();
+
+// 		if(x>=0 && x<SIZE && y>=0 && y<SIZE)
+// 			// intensify heat for better color results
+// 			dev_heatmap[y][x] += 40;
+// 	}
+// }
+
+__global__ void kernel_clip(int **dev_heatmap)
+{
+	int x = blockIdx.x * blockDim.x + threadIdx.x;	
+	int y = blockIdx.y * blockDim.y + threadIdx.y;	
+	if (x < SIZE && y < SIZE){
+		dev_heatmap[y][x] = dev_heatmap[y][x] < 255 ? dev_heatmap[y][x] : 255;
+	}
+}
+
+__global__ void kernel_scale(int **dev_heatmap, int **dev_scaled_heatmap)
+{
+	int x = blockIdx.x * blockDim.x + threadIdx.x;	
+	int y = blockIdx.y * blockDim.y + threadIdx.y;	
+	if (x < SCALED_SIZE && y < SCALED_SIZE)
+	{
+		int value = dev_heatmap[y][x];
+		for (int cellY = 0; cellY < CELLSIZE; cellY++)
+		{
+			for (int cellX = 0; cellX < CELLSIZE; cellX++)
+			{
+				dev_scaled_heatmap[y * CELLSIZE + cellY][x * CELLSIZE + cellX] = value;
+			}
+		}
+
+	}
+}
+
+__global__ void kernel_blur(int **dev_heatmap, int **dev_blurred_heatmap, int **dev_scaled_heatmap)
+{
+	//weights for blur
+	const int w[5][5] = {
+		{ 1, 4, 7, 4, 1 },
+		{ 4, 16, 26, 16, 4 },
+		{ 7, 26, 41, 26, 7 },
+		{ 4, 16, 26, 16, 4 },
+		{ 1, 4, 7, 4, 1 }
+	};
+	int x = blockIdx.x * blockDim.x + threadIdx.x;	
+	int y = blockIdx.y * blockDim.y + threadIdx.y;	
+	if (x >= 2 && x < SCALED_SIZE && y >= 2 && y < SCALED_SIZE)
+	{
+		int sum = 0;
+		for (int k = -2; k < 3; k++)
+		{
+			for (int l = -2; l < 3; l++)
+			{
+				sum += w[2 + k][2 + l] * dev_scaled_heatmap[y + k][x + l];
+			}
+		}
+		int value = sum / WEIGHTSUM;
+		dev_blurred_heatmap[y][x] = 0x00FF0000 | value << 24;
+	}
+}
+
+
+void Ped::Model::updateHeatmapCuda() 
+{
+	// Create streams
+	cudaStream_t stream1, stream2, stream3;
+	cudaStreamCreate(&stream1);
+	cudaStreamCreate(&stream2);
+	cudaStreamCreate(&stream3);
+
+	cudaEvent_t ev1;
+	cudaEventCreate(&ev1);
+	// Create events
+
+	// Fade heatmap
+	kernel_fade<<<1, SIZE, 0, stream1>>>(d_heatmap);
+	cudaEventRecord(ev1, stream1);
+
+	// Count how many agents want to go to each location
+
+		// Count how many agents want to go to each location
+	for (int i = 0; i < agents.size(); i++)
+	{
+		Ped::Tagent* agent = agents[i];
+		int x = agent->getDesiredX();
+		int y = agent->getDesiredY();
+
+		if (x < 0 || x >= SIZE || y < 0 || y >= SIZE)
+		{
+			continue;
+		}
+		// intensify heat for better color results
+		d_heatmap[y][x] += 40;
+	}
+	// int size_agents = agents.size();
+	// Ped::Tagent *d_agents;
+	// cudaMalloc((void **)&d_agents, size_agents*sizeof(Ped::Tagent));
+	// cudaMemcpyAsync(d_agents, agents, size_agents*sizeof(Ped::Tagent), cudaMemcpyHostToDevice, stream2);
+	// cudaStreamWaitEvent(stream1, ev1);
+	// kernel_agents<<<1, size_agents, 0, stream1>>>(d_heatmap, d_agents, size_agents);
+	// free(d_agents)
+	// free(*d_agents)
+
+	//Clip heatmap
+	kernel_clip<<<1, SIZE, 0, stream1>>>(d_heatmap);
+
+	//Scale heatmap
+	kernel_scale<<<1, SIZE, 0, stream2>>>(d_heatmap, d_scaled_heatmap);
+
+	// Blur heatmap
+	kernel_blur<<<1, SIZE, 0, stream3>>>(d_heatmap, d_blurred_heatmap, d_scaled_heatmap);
+
+}
+
+int Ped::Model::getHeatmapSize() const {
+	return SCALED_SIZE;
+}
+

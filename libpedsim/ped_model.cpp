@@ -25,7 +25,6 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Convenience test: does CUDA work on this machine?
 	cuda_test();
 
-	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
 	// Set up destinations
@@ -60,30 +59,15 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 		destR[i] = agents.at(i)->getDestR();
 	}
 
-	// Initialize vectors representing the regions' x values
-
-	//region1.push_back(0);
+	// Initialize regions' x values
 	region1 = 40;
 	region2 = 80;
 	region3 = 120;
 	region4 = 160;
 
-	//for (Tagent *agent: agents) {
-	//	int X = agent->getX();
-	//	if(X<= region1) {
-	//		region1list.insert(agent);
-	//	}else if(X <= region2) {
-	//		region2list.insert(agent);
-	//	}else if(X <= region3) {
-	//		region3list.insert(agent);
-	//	}else {
-	//		region4list.insert(agent);
-	//	}
-	//}
-
-
 	// Set up heatmap (relevant for Assignment 4)
-	setupHeatmapSeq();
+	//setupHeatmapSeq();
+	setupHeatmapCuda();
 }
 
 void action(std::vector<Ped::Tagent *> allAgents, int start, int end)
@@ -97,7 +81,6 @@ void action(std::vector<Ped::Tagent *> allAgents, int start, int end)
 
 void Ped::Model::tick()
 {
-
 	//To choose which implementation to run, change line 70 in the main file located in the demo folder
 	//Change the last argument for the setup function to whichever implementation you want to run
 	//Example: model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ);   will run sequential version
@@ -339,35 +322,8 @@ void Ped::Model::move(Ped::Tagent *agent)
 	}
 }
 
-/// Returns the list of neighbors within dist of the point x/y. This
-/// can be the position of an agent, but it is not limited to this.
-/// \date    2012-01-29
-/// \return  The list of neighbors
-/// \param   x the x coordinate
-/// \param   y the y coordinate
-/// \param   dist the distance around x/y that will be searched for agents (search field is a square in the current implementation)
-set<const Ped::Tagent*> Ped::Model::getNeighbors(int x, int y, int dist) const {
-
-	// create the output list
-	// ( It would be better to include only the agents close by, but this programmer is lazy.)	
-	return set<const Ped::Tagent*>(agents.begin(), agents.end());
-}
-
-void Ped::Model::cleanup() {
-	// Nothing to do here right now. 
-}
-
-Ped::Model::~Model()
-{
-	std::for_each(agents.begin(), agents.end(), [](Ped::Tagent *agent){delete agent;});
-	std::for_each(destinations.begin(), destinations.end(), [](Ped::Twaypoint *destination){delete destination; });
-}
-
-
-
 void Ped::Model::movecrit(Ped::Tagent *agent) 
 {
-	
 	// Search for neighboring agents
 	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
 
@@ -435,4 +391,34 @@ void Ped::Model::movecrit(Ped::Tagent *agent)
 			break;
 		}
 	}
+}
+
+/// Returns the list of neighbors within dist of the point x/y. This
+/// can be the position of an agent, but it is not limited to this.
+/// \date    2012-01-29
+/// \return  The list of neighbors
+/// \param   x the x coordinate
+/// \param   y the y coordinate
+/// \param   dist the distance around x/y that will be searched for agents (search field is a square in the current implementation)
+set<const Ped::Tagent*> Ped::Model::getNeighbors(int x, int y, int dist) const {
+
+	// create the output list
+	// ( It would be better to include only the agents close by, but this programmer is lazy.)	
+	return set<const Ped::Tagent*>(agents.begin(), agents.end());
+}
+
+void Ped::Model::cleanup() {
+	// Nothing to do here right now. 
+}
+
+Ped::Model::~Model()
+{
+	std::for_each(agents.begin(), agents.end(), [](Ped::Tagent *agent){delete agent;});
+	std::for_each(destinations.begin(), destinations.end(), [](Ped::Twaypoint *destination){delete destination; });
+	free(*heatmap);
+	free(heatmap);
+	free(*scaled_heatmap);
+	free(scaled_heatmap);
+	free(*blurred_heatmap);
+	free(blurred_heatmap);
 }
