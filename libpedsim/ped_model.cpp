@@ -226,7 +226,7 @@ void Ped::Model::tick()
 				move(agent);
 			}
 		}
-		updateHeatmapSeq();
+		updateHeatmapCuda();
 		}
 
 	}
