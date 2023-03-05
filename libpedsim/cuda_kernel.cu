@@ -93,34 +93,37 @@ __global__ void kernel_agents(int *dev_heatmap, int size_agents, int *desiredX, 
 	}
 }
 
-__global__ void kernel_clip(int **dev_heatmap)
+__global__ void kernel_clip(int *dev_heatmap)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;	
-	int y = blockIdx.y * blockDim.y + threadIdx.y;	
-	if (x < SIZE && y < SIZE){
-		dev_heatmap[y][x] = dev_heatmap[y][x] < 255 ? dev_heatmap[y][x] : 255;
+	if (x < SIZE ){
+		dev_heatmap[x] = dev_heatmap[x] < 255 ? dev_heatmap[x] : 255;
 	}
 }
 
-__global__ void kernel_scale(int **dev_heatmap, int **dev_scaled_heatmap)
+__global__ void kernel_scale(int *dev_heatmap, int *dev_scaled_heatmap)
 {
-	int x = blockIdx.x * blockDim.x + threadIdx.x;	
-	int y = blockIdx.y * blockDim.y + threadIdx.y;	
-	if (x < SCALED_SIZE && y < SCALED_SIZE)
+	int id = blockIdx.x * blockDim.x + threadIdx.x;	
+	int x = id / SIZE;
+	int y = id % SIZE;
+	if (id < SCALED_SIZE)
 	{
-		int value = dev_heatmap[y][x];
+		int value = dev_heatmap[id];
 		for (int cellY = 0; cellY < CELLSIZE; cellY++)
 		{
 			for (int cellX = 0; cellX < CELLSIZE; cellX++)
 			{
-				dev_scaled_heatmap[y * CELLSIZE + cellY][x * CELLSIZE + cellX] = value;
+				int s_y = y * CELLSIZE + cellY;
+                int s_x = x * CELLSIZE + cellX;
+				dev_scaled_heatmap[s_y*SCALED_SIZE + s_x] = value;
+
 			}
 		}
 
 	}
 }
 
-__global__ void kernel_blur(int **dev_heatmap, int **dev_blurred_heatmap, int **dev_scaled_heatmap)
+__global__ void kernel_blur(int *dev_heatmap, int *dev_blurred_heatmap, int *dev_scaled_heatmap)
 {
 	//weights for blur
 	const int w[5][5] = {
@@ -201,10 +204,10 @@ void Ped::Model::updateHeatmapCuda()
 	// free(*d_agents)
 
 	//Clip heatmap
-	// kernel_clip<<<1, SIZE, 0, stream1>>>(d_heatmap);
+	kernel_clip<<<1, SIZE, 0, stream1>>>(d_heatmap);
 
-	// //Scale heatmap
-	// kernel_scale<<<1, SIZE, 0, stream2>>>(d_heatmap, d_scaled_heatmap);
+	//Scale heatmap
+	kernel_scale<<<1, SIZE, 0, stream2>>>(d_heatmap, d_scaled_heatmap);
 
 	// // Blur heatmap
 	// kernel_blur<<<1, SIZE, 0, stream3>>>(d_heatmap, d_blurred_heatmap, d_scaled_heatmap);
