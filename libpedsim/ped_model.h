@@ -130,6 +130,8 @@ namespace Ped{
 		int *d_desiredX;
 		int *d_desiredY;
 
+		int agents;
+		int agentsSize;
 		void setupHeatmapCuda();
 		void setupHeatmapSeq();
 		void updateHeatmapSeq();

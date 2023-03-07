@@ -60,8 +60,8 @@ namespace Ped {
 		int* getYAddr() { return &y; };
 
 		// Returns the coordinates of the desired position
-		float getDesiredX() const { return desiredPositionX; };
-		float getDesiredY() const { return desiredPositionY; };
+		int getDesiredX() const { return desiredPositionX; };
+		int  getDesiredY() const { return desiredPositionY; };
 
         int waypointSize() {return waypoints.size();};
 

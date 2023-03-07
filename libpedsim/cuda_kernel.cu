@@ -10,6 +10,7 @@ using namespace std;
 
 // Memory leak check with msvc++
 #include <stdlib.h>
+#define SIZE 1024
 
 /* ---------------------------
 	SET HEATMAP FUNCTIONS
@@ -39,30 +40,43 @@ void Ped::Model::setupHeatmapCuda()
 	}
 
 
-	int *desiredX = (int*)malloc(agents.size()*sizeof(int));
-	int *desiredY = (int*)malloc(agents.size()*sizeof(int));
+	desiredX = new int[agents.size()];
+	desiredY = new int[agents.size()];
+	agents = agents.size();
+	agentsSize = &agents;
 
+	//cudaMallocHost(&desiredX, agents.size()*sizeof(int));
+	//cudaMallocHost(&desiredY, agents.size()*sizeof(int));
+	
 	for (int i = 0; i < agents.size(); i++)
 	{
-		Ped::Tagent* agent = agents[i];
-		desiredX[i] = agent->getDesiredX();
-		desiredY[i] = agent->getDesiredY();
+		desiredX[i] = agents[i]->getDesiredX();
+		desiredY[i] = agents[i]->getDesiredY();
 	}
-
-
-
 
 	cudaMalloc(&d_desiredX, agents.size()*sizeof(int));
 	cudaMalloc(&d_desiredY, agents.size()*sizeof(int));
-	// Allocate memory on GPU
-	cudaMalloc(&d_heatmap, SIZE*sizeof(int));
-	cudaMalloc(&d_scaled_heatmap, SCALED_SIZE*sizeof(int));
-	cudaMalloc(&d_blurred_heatmap, SCALED_SIZE*sizeof(int));
 
+	cudaMemcpy(d_desiredX, desiredX, agents.size()*sizeof(int));
+	cudaMemcpy(d_desiredY, desiredY, agents.size()*sizeof(int));
+
+	cudaMalloc(&d_agentsSize, sizeof(int*));
+	cudaMempy(d_agentsSize, agentsSize, sizeof(int*), cudaMemcpyHostToDevice);
+
+
+	// Allocate memory on GPU
+	cudaMalloc(&d_heatmap, SIZE*SIZE*sizeof(int));
+	cudaMemcpy(d_heatmap, heatmap[0], SIZE*SIZE*sizeof(int), cudaMemcpyHostToDevice);
+
+	cudaMalloc(&d_scaled_heatmap, SCALED_SIZE*SCALED_SIZE*sizeof(int));
+	cudaMemcpy(d_scaled_heatmap, scaled_heatmap[0], SCALED_SIZE*SCALED_SIZE*sizeof(int), cudaMemcpyHostToDevice);
+
+	cudaMalloc(&d_blurred_heatmap, SCALED_SIZE*SCALED_SIZE*sizeof(int*));
+	cudaMemcpy(d_blurred_heatmap, blurred_heatmap[0], SCALED_SIZE*SCALED_SIZE*sizeof(int), cudaMemcpyHostToDevice);
+	cudaDeviceSynchronize();
+
+	
 	// Copy memory from host to device
-	cudaMemcpy(d_heatmap, heatmap, SIZE*sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_scaled_heatmap, scaled_heatmap, SCALED_SIZE*sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_blurred_heatmap, blurred_heatmap, SCALED_SIZE*sizeof(int), cudaMemcpyHostToDevice);
 }
 
 /* ---------------------------
@@ -159,39 +173,31 @@ void Ped::Model::updateHeatmapCuda()
 	cudaStreamCreate(&stream2);
 	cudaStreamCreate(&stream3);
 
-	cudaEvent_t ev1;
-	cudaEventCreate(&ev1);
-	// Create events
 
+
+	cudaError_t cudaStatus;
+	cudaStatus = cudaSetDevice(0);
+	for (int i = 0; i < agents.size(); i++)
+	{
+		desiredX[i] = agents[i]->getDesiredX();
+		desiredY[i] = agents[i]->getDesiredY();
+	}
+
+
+	cudaMemcpy(d_desiredX, desiredX, agents.size()*sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_desiredY, desiredY, agents.size()*sizeof(int), cudaMemcpyHostToDevice);
+
+	//cout << d_desiredX[0] << "\n";
+
+	// dim3 threads_per_block(32, 32);
+    // dim3 num_blocks(SIZE / threads_per_block.x, SIZE / threads_per_block.y);
 	// Fade heatmap
-	kernel_fade<<<CELLSIZE, SIZE, 0, stream1>>>(d_heatmap);
-	cudaEventRecord(ev1, stream1);
+	kernel_fade<<<SIZE, SIZE>>>(d_heatmap);
+	//heatmapFading<<<SIZE, SIZE, 0, stream>>>(heatmap_tmp);
 
-	cudaMemcpyAsync(d_desiredX, desiredX, agents.size()*sizeof(Ped::Tagent), cudaMemcpyHostToDevice, stream2);
-	cudaMemcpyAsync(d_desiredY, desiredY, agents.size()*sizeof(Ped::Tagent), cudaMemcpyHostToDevice, stream2);
-
-	cudaStreamWaitEvent(stream1, ev1);
-
-	kernel_agents<<<1, agents.size(), 0, stream1>>>(d_heatmap, agents.size(), d_desiredX, d_desiredY);
-
-	// Count how many agents want to go to each location
-
-		// Count how many agents want to go to each location
-	
-	// for (int i = 0; i < agents.size(); i++)
-	// {
-		// Ped::Tagent* agent = agents[i];
-		// int x = agent->getDesiredX();
-		// int y = agent->getDesiredY();
-
-		// if (x < 0 || x >= SIZE || y < 0 || y >= SIZE)
-		// {
-			// continue;
-		// }
-		// // intensify heat for better color results
-		// d_heatmap[y][x] += 40;
-	// }
-
+    // int threads_per_blocki = 1024;
+    // int num_blocksi = (agents.size() + threads_per_blocki - 1) / threads_per_blocki;
+	kernel_agents<<<1, agents.size()>>>(d_heatmap, agents.size(), d_desiredX, d_desiredY);
 
 
 	// int size_agents = agents.size();
@@ -204,13 +210,21 @@ void Ped::Model::updateHeatmapCuda()
 	// free(*d_agents)
 
 	//Clip heatmap
+	kernel_clip<<<SIZE, SIZE>>>(d_heatmap, agents.size(), d_desiredX, d_desiredY);
 	kernel_clip<<<1, SIZE, 0, stream1>>>(d_heatmap);
 
 	//Scale heatmap
+	kernel_scale<<<SIZE, SIZE>>>(d_heatmap, d_scaled_heatmap);
 	kernel_scale<<<1, SIZE, 0, stream2>>>(d_heatmap, d_scaled_heatmap);
+
+	// Blur heatmap
+	dim3 num_blocks_SCALED(SCALED_SIZE / threads_per_block.x, SCALED_SIZE / threads_per_block.y);
+	kernel_blur<<<SIZE,SIZE >>>(d_heatmap, d_blurred_heatmap, d_scaled_heatmap);
 
 	// // Blur heatmap
 	// kernel_blur<<<1, SIZE, 0, stream3>>>(d_heatmap, d_blurred_heatmap, d_scaled_heatmap);
+
+	cudaMemcpy(blurred_heatmap, d_blurred_heatmap, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
 
 }
 
