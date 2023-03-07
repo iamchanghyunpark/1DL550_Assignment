@@ -167,16 +167,9 @@ __global__ void kernel_blur(int *dev_heatmap, int *dev_blurred_heatmap, int *dev
 
 void Ped::Model::updateHeatmapCuda() 
 {
-	// Create streams
-	cudaStream_t stream1, stream2, stream3;
-	cudaStreamCreate(&stream1);
-	cudaStreamCreate(&stream2);
-	cudaStreamCreate(&stream3);
 
 
 
-	cudaError_t cudaStatus;
-	cudaStatus = cudaSetDevice(0);
 	for (int i = 0; i < agents.size(); i++)
 	{
 		desiredX[i] = agents[i]->getDesiredX();
@@ -197,7 +190,7 @@ void Ped::Model::updateHeatmapCuda()
 
     // int threads_per_blocki = 1024;
     // int num_blocksi = (agents.size() + threads_per_blocki - 1) / threads_per_blocki;
-	kernel_agents<<<1, agents.size()>>>(d_heatmap, agents.size(), d_desiredX, d_desiredY);
+	kernel_agents<<<1, agents.size()>>>(d_heatmap, d_agentsSize, d_desiredX, d_desiredY);
 
 
 	// int size_agents = agents.size();
@@ -211,18 +204,12 @@ void Ped::Model::updateHeatmapCuda()
 
 	//Clip heatmap
 	kernel_clip<<<SIZE, SIZE>>>(d_heatmap, agents.size(), d_desiredX, d_desiredY);
-	kernel_clip<<<1, SIZE, 0, stream1>>>(d_heatmap);
 
 	//Scale heatmap
 	kernel_scale<<<SIZE, SIZE>>>(d_heatmap, d_scaled_heatmap);
-	kernel_scale<<<1, SIZE, 0, stream2>>>(d_heatmap, d_scaled_heatmap);
 
 	// Blur heatmap
-	dim3 num_blocks_SCALED(SCALED_SIZE / threads_per_block.x, SCALED_SIZE / threads_per_block.y);
 	kernel_blur<<<SIZE,SIZE >>>(d_heatmap, d_blurred_heatmap, d_scaled_heatmap);
-
-	// // Blur heatmap
-	// kernel_blur<<<1, SIZE, 0, stream3>>>(d_heatmap, d_blurred_heatmap, d_scaled_heatmap);
 
 	cudaMemcpy(blurred_heatmap, d_blurred_heatmap, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
 

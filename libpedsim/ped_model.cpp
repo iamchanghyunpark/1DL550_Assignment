@@ -201,7 +201,6 @@ void Ped::Model::tick()
 		}
 	}
 	if(this->implementation == TASK) {
-		updateHeatmapCuda();
 
 		#pragma omp parallel shared(allAgents) num_threads(4) //for
 		#pragma omp single 
