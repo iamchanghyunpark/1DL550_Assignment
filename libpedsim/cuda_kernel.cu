@@ -220,7 +220,7 @@ void Ped::Model::updateHeatmapCuda()
 
 	cudaError_t cudaStatus;
 
-	cudaStatus= cudaMemcpy(heatmap, d_heatmap[0], SIZE*SIZE*sizeof(int), cudaMemcpyDeviceToHost);
+	cudaStatus= cudaMemcpyAsync(d_heatmap[0], heatmap, SIZE*sizeof(int*), cudaMemcpyDeviceToHost);
 	if(cudaStatus != cudaSuccess) {
 		fprintf(stderr, "FUCK OFF\n");
 	}
