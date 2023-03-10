@@ -130,12 +130,16 @@ namespace Ped{
 		int *d_desiredX;
 		int *d_desiredY;
 
-		int agents;
 		int agentsSize;
+		int *agentsSizePtr;
+		int d_agentsSize;
+		int *d_agentsSizePtr;
+
 		void setupHeatmapCuda();
 		void setupHeatmapSeq();
 		void updateHeatmapSeq();
 		void updateHeatmapCuda();
+		cudaStream_t s;
 	
 	};
 }
