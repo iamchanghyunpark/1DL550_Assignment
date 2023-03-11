@@ -13,7 +13,7 @@ __global__ void addKernel(int *c, const int *a, const int *b)
 
 int cuda_test()
 {
-    static int tested = 0;cudaDeviceReset failed!
+    static int tested = 0;
 
 	const int arraySize = 5;
 	const int a[arraySize] = { 1, 2, 3, 4, 5 };
@@ -36,7 +36,7 @@ int cuda_test()
 
 	// cudaDeviceReset must be called before exiting in order for profiling and
 	// tracing tools such as Nsight and Visual Profiler to show complete traces.
-	err = cudaDeviceReset();
+	cudaStatus = cudaDeviceReset();
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "%s\n", cudaGetErrorString(cudaStatus));
 		return 1;

@@ -119,3 +119,7 @@ void Ped::Model::updateHeatmapSeq()
 		}
 	}
 }
+
+int Ped::Model::getHeatmapSize() const {
+	return SCALED_SIZE;
+}

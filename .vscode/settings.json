@@ -3,6 +3,12 @@
         "iostream": "cpp",
         "cmath": "cpp",
         "bitset": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "functional": "cpp",
+        "ratio": "cpp",
+        "array": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp"
     }
 }

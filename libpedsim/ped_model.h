@@ -14,7 +14,8 @@
 #include <vector>
 #include <map>
 #include <set>
-#include <cuda_runtime.h>
+#include "cuda_runtime.h"	
+#include "device_launch_parameters.h"
 
 #include "ped_agent.h"
 
@@ -101,10 +102,8 @@ namespace Ped{
 		////////////
 		/// Everything below here won't be relevant until Assignment 3
 		///////////////////////////////////////////////
-
 		// Returns the set of neighboring agents for the specified position
 		set<const Ped::Tagent*> getNeighbors(int x, int y, int dist) const;
-
 		////////////
 		/// Everything below here won't be relevant until Assignment 4
 		///////////////////////////////////////////////
@@ -139,6 +138,7 @@ namespace Ped{
 		void setupHeatmapSeq();
 		void updateHeatmapSeq();
 		void updateHeatmapCuda();
+		//void cudaLaunchWork(int *hm, int *shm, int *bhm, int *dx, int *dy, int size);
 		cudaStream_t s;
 	
 	};

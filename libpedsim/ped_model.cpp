@@ -19,6 +19,9 @@
 #define SSE
 #include <emmintrin.h>
 #include <smmintrin.h>
+#include "cuda_kernel.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
 {
@@ -42,7 +45,8 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	destX = (float *) _mm_malloc(size * sizeof(float), 16);
 	destY = (float *) _mm_malloc(size * sizeof(float), 16);
 	destR = (float *) _mm_malloc(size * sizeof(float), 16);
-	
+	desiredX = (int*) malloc(agents.size() * sizeof(int));
+	desiredY = (int*) malloc(agents.size() * sizeof(int));
 	// Initialize values of coordinates
 	for (int i = 0; i < agents.size(); i++){
 		agents.at(i)->setId(i);
@@ -65,8 +69,16 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	region3 = 120;
 	region4 = 160;
 
+	// Desired positions
+	for (int i = 0; i < agents.size(); i++)
+	{
+		desiredX[i] = agents[i]->getDesiredX();
+		//std::cout << type_name<decltype(desiredX[i])>() << '\n';
+		desiredY[i] = agents[i]->getDesiredY();
+	}
+
 	// Set up heatmap (relevant for Assignment 4)
-	//setupHeatmapSeq();
+	setupHeatmapSeq();
 	setupHeatmapCuda();
 }
 
@@ -201,7 +213,16 @@ void Ped::Model::tick()
 		}
 	}
 	if(this->implementation == TASK) {
-
+		//for (size_t i = 0; i < agents.size(); i++) {
+		//	//agents[i]->computeNextDesiredPosition();
+		//	desiredX[i] = agents[i]->getDesiredX();
+		//	desiredY[i] = agents[i]->getDesiredY();
+		//}
+		for (int i = 0; i < agents.size(); i++)
+		{
+			desiredX[i] = agents[i]->getDesiredX();
+			desiredY[i] = agents[i]->getDesiredY();
+		}
 		#pragma omp parallel shared(allAgents) num_threads(4) //for
 		#pragma omp single 
 		{
@@ -227,8 +248,10 @@ void Ped::Model::tick()
 				move(agent);
 			}
 		}
+		//cudaLaunchWork(heatmap[0],scaled_heatmap[0],blurred_heatmap[0],desiredX,desiredY,(int) agents.size());
 		updateHeatmapCuda();
 		}
+		//void cudaLaunchWork(int *hm, int *shm, int *bhm, int *dx, int *dy, int size);
 
 	}
 
@@ -238,7 +261,6 @@ void Ped::Model::tick()
 			agent->computeNextDesiredPosition();
 			move(agent);
 		}
-
 	}
 }
 
