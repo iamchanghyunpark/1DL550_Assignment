@@ -19,7 +19,6 @@
 #define SSE
 #include <emmintrin.h>
 #include <smmintrin.h>
-#include "cuda_kernel.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
@@ -213,16 +212,13 @@ void Ped::Model::tick()
 		}
 	}
 	if(this->implementation == TASK) {
-		//for (size_t i = 0; i < agents.size(); i++) {
-		//	//agents[i]->computeNextDesiredPosition();
-		//	desiredX[i] = agents[i]->getDesiredX();
-		//	desiredY[i] = agents[i]->getDesiredY();
-		//}
+		// Desired positions of agents
 		for (int i = 0; i < agents.size(); i++)
 		{
 			desiredX[i] = agents[i]->getDesiredX();
 			desiredY[i] = agents[i]->getDesiredY();
 		}
+		// Move agents
 		#pragma omp parallel shared(allAgents) num_threads(4) //for
 		#pragma omp single 
 		{
@@ -248,10 +244,8 @@ void Ped::Model::tick()
 				move(agent);
 			}
 		}
-		//cudaLaunchWork(heatmap[0],scaled_heatmap[0],blurred_heatmap[0],desiredX,desiredY,(int) agents.size());
 		updateHeatmapCuda();
 		}
-		//void cudaLaunchWork(int *hm, int *shm, int *bhm, int *dx, int *dy, int size);
 
 	}
 

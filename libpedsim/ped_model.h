@@ -116,30 +116,28 @@ namespace Ped{
 		// The heatmap representing the density of agents
 		int ** heatmap;
 		int * d_heatmap;
+
 		// The scaled heatmap that fits to the view
 		int ** scaled_heatmap;
 		int * d_scaled_heatmap;
+
 		// The final heatmap: blurred and scaled to fit the view
 		int ** blurred_heatmap;
 		int * d_blurred_heatmap;
 
+		// Desired positions of agents
 		int *desiredX;
 		int *desiredY;
-
 		int *d_desiredX;
 		int *d_desiredY;
 
+		// Number of agents in scenario
 		int agentsSize;
-		int *agentsSizePtr;
-		int d_agentsSize;
-		int *d_agentsSizePtr;
 
 		void setupHeatmapCuda();
 		void setupHeatmapSeq();
 		void updateHeatmapSeq();
 		void updateHeatmapCuda();
-		//void cudaLaunchWork(int *hm, int *shm, int *bhm, int *dx, int *dy, int size);
-		cudaStream_t s;
 	
 	};
 }
