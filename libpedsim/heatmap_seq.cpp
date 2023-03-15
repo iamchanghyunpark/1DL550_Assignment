@@ -6,6 +6,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <ctime>
 #include <cmath>
 using namespace std;
 
@@ -41,6 +42,9 @@ void Ped::Model::setupHeatmapSeq()
 // Updates the heatmap according to the agent positions
 void Ped::Model::updateHeatmapSeq()
 {
+
+	clock_t time_req;	
+	time_req =clock();
 	for (int x = 0; x < SIZE; x++)
 	{
 		for (int y = 0; y < SIZE; y++)
@@ -49,8 +53,11 @@ void Ped::Model::updateHeatmapSeq()
 			heatmap[y][x] = (int)round(heatmap[y][x] * 0.80);
 		}
 	}
+	time_req = clock() - time_req;
+	cout << "Fade time: " << (float) time_req/CLOCKS_PER_SEC << "\n";
 
 	// Count how many agents want to go to each location
+	time_req=clock();
 	for (int i = 0; i < agents.size(); i++)
 	{
 		Ped::Tagent* agent = agents[i];
@@ -64,9 +71,11 @@ void Ped::Model::updateHeatmapSeq()
 
 		// intensify heat for better color results
 		heatmap[y][x] += 40;
-
 	}
+	time_req = clock() - time_req;
+	cout << "Agents time: " << (float) time_req/CLOCKS_PER_SEC << "\n";
 
+	time_req=clock();
 	for (int x = 0; x < SIZE; x++)
 	{
 		for (int y = 0; y < SIZE; y++)
@@ -74,8 +83,11 @@ void Ped::Model::updateHeatmapSeq()
 			heatmap[y][x] = heatmap[y][x] < 255 ? heatmap[y][x] : 255;
 		}
 	}
+	time_req = clock() - time_req;
+	cout << "Clip time: " << (float) time_req/CLOCKS_PER_SEC<< "\n";
 
 	// Scale the data for visual representation
+	time_req=clock();
 	for (int y = 0; y < SIZE; y++)
 	{
 		for (int x = 0; x < SIZE; x++)
@@ -90,7 +102,13 @@ void Ped::Model::updateHeatmapSeq()
 			}
 		}
 	}
+	time_req = clock() - time_req;
+	cout << "Scale time: " << (float) time_req/CLOCKS_PER_SEC << "\n";
 
+
+
+
+	time_req=clock();
 	// Weights for blur filter
 	const int w[5][5] = {
 		{ 1, 4, 7, 4, 1 },
@@ -118,6 +136,8 @@ void Ped::Model::updateHeatmapSeq()
 			blurred_heatmap[i][j] = 0x00FF0000 | value << 24;
 		}
 	}
+	time_req = clock() - time_req;
+	cout << "Blur time: " << (float) time_req/CLOCKS_PER_SEC << "\n";
 }
 
 int Ped::Model::getHeatmapSize() const {

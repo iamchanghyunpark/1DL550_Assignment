@@ -255,6 +255,7 @@ void Ped::Model::tick()
 			agent->computeNextDesiredPosition();
 			move(agent);
 		}
+	updateHeatmapSeq();
 	}
 }
 
